@@ -1,0 +1,16 @@
+{
+ "base": "goblin",
+ "pack": "goblin_male/default",
+ "features": {},
+ "head_scale": 1.473,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "look": "a male goblin with olive-green skin, a big bald head, very large pointed ears, a long hooked nose and a small wiry pot-bellied body with thin sinewy arms",
+ "line_words": "thin, crisp, dark green contour line",
+ "arms_paint": "narrow bony shoulders across the shoulder band; level thin sinewy arms with a slight elbow and a slender forearm",
+ "hands_paint": "each hand with five long thin fingers, knuckles and short fingernails",
+ "face_paint": "the head as a big bald scalp with a few faint darker mottled spots and, in the narrow strip along its bottom edge, a natural goblin face strongly foreshortened from above, a sly scowling wrinkled brow over shadowed eye slits, a long hooked nose that warms from olive-green to a dull tan at its tip, and a narrow jaw with its two tiny fangs; each big ear a thin leaf of skin with a shallow dull pink-brown inner hollow",
+ "torso_tilt": "the big head covers most of it, so only the outer edges of a narrow wiry chest show beside the jaw, and under the chin a thin rim of a small round belly.",
+ "torso_paint": "the torso as the narrow edges of a wiry chest beside the jaw and the thin rim of a small round belly under the chin",
+ "notes": "painter: legacy = bald olive-green male, pink-brown ear hollows, tan-tipped hooked nose, two lower fangs, wiry arms, pot belly. Head (legacy size) hides nearly all the torso at this camera."
+}

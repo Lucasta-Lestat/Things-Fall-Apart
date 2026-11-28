@@ -1,0 +1,106 @@
+{
+ "base": "human_undead_base",
+ "pack": "human_undead_female/default",
+ "shoulder_half": 0.325,
+ "delt_r": 0.07,
+ "trunk_depth_n": 0.1289,
+ "chest_depth_s": 0.1696,
+ "belly_depth_s": 0.1539,
+ "belly_half": 0.162,
+ "pec_half": 0.1118,
+ "upper_arm_r": [
+  0.054,
+  0.045
+ ],
+ "forearm_r": [
+  0.054,
+  0.041
+ ],
+ "elbow_x": 0.5616,
+ "wrist_x": 0.7642,
+ "palm_rx": 0.0849,
+ "palm_ry": 0.0587,
+ "finger_r": 0.0133,
+ "foot_x_tilt": 0.1366,
+ "foot_w": 0.0465,
+ "toe_y_tilt": 0.1652,
+ "leg_r": [
+  0.0715,
+  0.0487
+ ],
+ "skin": [
+  114,
+  112,
+  97
+ ],
+ "cap": {
+  "thick": 1.21,
+  "label": "hair",
+  "fwd": -0.2
+ },
+ "hair": [
+  112,
+  106,
+  90
+ ],
+ "swatch": {
+  "src": "Rigs/races/human_undead_female/default/body.png",
+  "box": [
+   684,
+   113,
+   773,
+   205
+  ]
+ },
+ "look": "an undead woman, a rotting walking corpse with dull olive-grey decaying skin, thin lank stringy grey-brown hair, a gaunt rotting face and an emaciated, wasted build",
+ "dome": "crown and parting of thin, lank, stringy grey-brown hair, messy, with stray strands",
+ "dome_cover_tilt": "hair",
+ "torso_tilt": "first the top plane of a thin chest, then, tucked under the chest, a short glimpse of the sunken upper belly.",
+ "torso_paint": "the torso as one thin bony chest with sagging skin and a sunken upper belly below it",
+ "face_paint": "the head seen from above: the crown and parting of thin, lank, stringy grey-brown hair, messy, with stray strands and uneven ends, fill the head, with the brow, nose tip and jaw compressed into a short band along its lower edge exactly as small as the sculpt has it, a gaunt rotting corpse face: heavy brow shadow, one dull pale eye and one dark sunken eye, sunken grey cheeks, a torn bloody wound on one cheek and a lipless mouth showing a row of teeth",
+ "arms_paint": "bony shoulders and sharp collarbones across the shoulder band; emaciated, wasted thin level arms of sagging skin over bone",
+ "features": {
+  "locks": {
+   "r": [
+    0.13,
+    0.06
+   ],
+   "len": 1.25,
+   "x": 0.98,
+   "paint": "each front lock as a thin stringy strand with an uneven end lying on the chest"
+  },
+  "strands": {
+   "kind": "locks",
+   "x": 0.45,
+   "out": 0.12,
+   "fwd": [
+    0.9,
+    1.2
+   ],
+   "len": 0.75,
+   "r": [
+    0.07,
+    0.035
+   ],
+   "guide": "A thin stray strand of hair hangs down over each side of the face.",
+   "paint": "each stray strand as a thin dark line of hair across the face"
+  },
+  "hair_long": {
+   "width": 1.65,
+   "depth": 0.7,
+   "back": 0.35,
+   "paint": "the hair on the shoulders as thin stringy strands with uneven ends seen from above"
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.182 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.21"
+ ],
+ "head_scale": 1.385,
+ "note": "Many ragged dull-red open wounds, each with a dark rim as in the swatch, lie along both arms, the shoulders and one flank, flat in the skin. The hair is a warm grey-brown, lighter than the contour line, falling over the shoulders in thin strands with uneven ends.",
+ "face_tilt": "a heavy brow shadow, a nose tip and a jaw with a row of teeth, compressed into a short band. Brow, nose tip and teeth sit close together, squeezed by the steep view, and the jaw is the bottom edge of the head, with the chest starting directly below it.",
+ "skin_words": "dull olive-grey decaying skin, its lighter highlights",
+ "face_scale": 0.88,
+ "hands_paint": "each hand bony with five thin well-formed fingers, knuckles and short fingernails, each finger closed all round by the dark contour line",
+ "finish": "chalky matte olive-grey skin",
+ "line_words": "crisp, near-black olive contour line"
+}

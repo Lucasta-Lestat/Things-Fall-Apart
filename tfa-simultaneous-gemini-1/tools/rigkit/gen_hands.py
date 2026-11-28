@@ -128,7 +128,7 @@ PROMPT = (
 
 def make_swatch():
     """A greyscale patch of painted forearm: carries line weight and brush finish only."""
-    race = core.load_race("orc", "tilt15")
+    race = core.load_race("orc", "default")
     body = Image.open(core.race_file(race, "art")).convert("RGBA")
     f = race["frames"]["forearm_r"]
     x, y = int(f["o"][0]), int(f["o"][1])

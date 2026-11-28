@@ -1,0 +1,66 @@
+{
+ "base": "newt_base",
+ "pack": "newt_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.111,
+ "trunk_depth_n": 0.1747,
+ "chest_depth_s": 0.2234,
+ "belly_depth_s": 0.1997,
+ "belly_half": 0.2071,
+ "pec_half": 0.1323,
+ "upper_arm_r": [
+  0.0942,
+  0.0771
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "elbow_x": 0.5805,
+ "wrist_x": 0.7755,
+ "palm_rx": 0.0808,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x_tilt": 0.1697,
+ "foot_w": 0.075,
+ "toe_y_tilt": 0.1985,
+ "leg_r": [
+  0.0887,
+  0.0566
+ ],
+ "skin": [
+  217,
+  97,
+  63
+ ],
+ "swatch": {
+  "src": "Rigs/races/newt_male/default/body.png",
+  "box": [
+   199,
+   51,
+   347,
+   196
+  ]
+ },
+ "look": "a male newt-folk with smooth orange-red skin, a broad rounded salamander head with amber eyes set wide apart, and a heavily muscled, broad-shouldered build",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "features": {},
+ "head_scale": 1.63,
+ "depth_band": [
+  0.22,
+  0.319
+ ],
+ "notes": [
+  "depth band widened to 0.319: with the legacy head size the humanoid figure is 0.307 deep (the head, not the camera, sets the depth)"
+ ],
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad salamander foot front with four soft toes that fan out and end in rounded tips.",
+ "feet_paint": "each foot front as a salamander foot with four soft toes with rounded tips, joined at their bases by a little webbing",
+ "foot": {
+  "toe_len": 1.0,
+  "spread": 0.42,
+  "claw": 0.0
+ },
+ "hands_paint": "each hand as a salamander hand with soft smooth fingers with rounded tips and a little webbing at their bases",
+ "face_paint": "the head as a smooth rounded top of the skull seen from above with, in the narrow strip along its bottom edge, a natural newt-folk face strongly foreshortened from above, two amber eyes with dark pupils set wide apart at the sides of a broad rounded salamander snout with two small nostrils at its tip"
+}

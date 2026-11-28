@@ -7,20 +7,20 @@
  "tilt_deg": 15.0,
  "px_per_unit": 639.84,
  "bbox": [
-  43,
-  218,
-  1332,
-  549
+  42,
+  171,
+  1333,
+  596
  ],
- "span_px": 1290,
- "depth_px": 332,
- "shoulder_line_y": 307.82,
+ "span_px": 1292,
+ "depth_px": 426,
+ "shoulder_line_y": 354.32,
  "skull_centre": [
   688.0,
-  289.09
+  333.98
  ],
- "skull_r_px": 63.98,
- "depth_over_span": 0.2574,
+ "skull_r_px": 120.92,
+ "depth_over_span": 0.3297,
  "label_colours": {
   "background": [
    0,
@@ -86,9 +86,27 @@
    0,
    100,
    90
+  ],
+  "hair": [
+   245,
+   130,
+   48
   ]
  },
  "note": "figure faces south (image bottom); _l/_r are IMAGE left/right, as derive.py expects",
+ "core_bbox": [
+  42,
+  229,
+  1333,
+  596
+ ],
+ "core_span_px": 1292,
+ "core_depth_px": 368,
+ "core_depth_over_span": 0.2848,
+ "depth_band": [
+  0.22,
+  0.3
+ ],
  "derive": {
   "ok": true,
   "frames": [
@@ -112,28 +130,28 @@
   "notes": [],
   "head": {
    "o": [
-    687.27,
-    281.01
+    687.5,
+    289.83
    ],
    "ax": [
     1.0,
     0.0
    ],
-   "lx": 64.995,
-   "ly": 64.995
+   "lx": 122.153,
+   "ly": 122.153
   },
   "torso": {
    "o": [
-    687.46,
-    309.42
+    687.39,
+    351.57
    ],
    "ax": [
     1.0,
-    0.00097
+    0.00021
    ],
-   "lx": 209.054,
-   "ly": 175.565,
-   "ly_neg": 75.47
+   "lx": 189.223,
+   "ly": 181.435,
+   "ly_neg": 60.534
   }
  }
 }

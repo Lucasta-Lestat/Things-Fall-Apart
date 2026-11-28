@@ -1,0 +1,558 @@
+{
+ "base": "human_undead_base",
+ "pack": "human_undead_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.084,
+ "trunk_depth_n": 0.1504,
+ "chest_depth_s": 0.18,
+ "belly_depth_s": 0.162,
+ "belly_half": 0.172,
+ "pec_half": 0.112,
+ "upper_arm_r": [
+  0.066,
+  0.055
+ ],
+ "forearm_r": [
+  0.062,
+  0.045
+ ],
+ "elbow_x": 0.5555,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.0647,
+ "finger_r": 0.0146,
+ "foot_x_tilt": 0.1422,
+ "foot_w": 0.0552,
+ "toe_y_tilt": 0.1808,
+ "leg_r": [
+  0.0796,
+  0.0524
+ ],
+ "skin": [
+  120,
+  118,
+  103
+ ],
+ "swatch": {
+  "src": "Rigs/races/human_undead_male/default/body.png",
+  "box": [
+   268,
+   96,
+   372,
+   160
+  ]
+ },
+ "look": "an undead man, a walking corpse with muddy olive-khaki grey skin, desaturated and warm, lank thin dark greasy hair lying flat on the scalp, a gaunt face and a lean, sinewy, wasted build with broad bony shoulders",
+ "dome": "lank, thin, dark grey-brown greasy hair lying flat on the scalp, parted off-centre, its ragged ends reaching the brow, with one bare patch of scalp on the right of the picture carrying a pale-rimmed sore",
+ "dome_cover_tilt": "hair",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one lean bony chest with two flat thin pectoral muscles and a flat sunken upper belly below them",
+ "face_paint": "the head as lank, thin, dark greasy hair lying flat on the scalp seen from above, covering the head as far as on the sculpt, parted off-centre, with the bare scalp patch and its dull pale-rimmed sore on the right of the picture exactly where the sculpt has it, and, in the narrow strip along the head's bottom edge exactly as small as on the sculpt, a gaunt face strongly foreshortened from above: heavy brow shadow, pale eyes just visible under the brow, the nose tip and a bloodied upper lip at the bottom edge",
+ "arms_paint": "bony shoulders and collarbones across the shoulder band; level arms that are lean, sinewy and wasted, with thin stringy muscle under slack skin",
+ "features": {
+  "fringe": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "at": [
+    -0.18,
+    0.5,
+    0.12
+   ],
+   "r": [
+    0.84,
+    0.52,
+    0.46
+   ]
+  },
+  "scalp_patch": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "skin",
+   "core": false,
+   "at": [
+    0.58,
+    0.22,
+    0.74
+   ],
+   "r": [
+    0.42,
+    0.62,
+    0.4
+   ]
+  },
+  "scalp_wound": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "wound",
+   "core": false,
+   "at": [
+    0.6,
+    0.16,
+    0.86
+   ],
+   "r": [
+    0.22,
+    0.36,
+    0.3
+   ]
+  },
+  "w00": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.215,
+    -0.05,
+    1.5531
+   ],
+   "r": [
+    0.058,
+    0.036,
+    0.022
+   ]
+  },
+  "w00p": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "pale",
+   "core": true,
+   "at": [
+    0.215,
+    -0.05,
+    1.5561
+   ],
+   "r": [
+    0.029,
+    0.018,
+    0.024
+   ]
+  },
+  "w01": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.16,
+    -0.07,
+    1.5541
+   ],
+   "r": [
+    0.02,
+    0.016,
+    0.022
+   ]
+  },
+  "w02": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.1,
+    -0.1,
+    1.56
+   ],
+   "r": [
+    0.012,
+    0.012,
+    0.022
+   ]
+  },
+  "w03": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.33,
+    0.02,
+    1.5781
+   ],
+   "r": [
+    0.03,
+    0.018,
+    0.022
+   ]
+  },
+  "w03p": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "pale",
+   "core": true,
+   "at": [
+    -0.33,
+    0.02,
+    1.5811
+   ],
+   "r": [
+    0.015,
+    0.009,
+    0.024
+   ]
+  },
+  "w04": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.36,
+    0.035,
+    1.5957
+   ],
+   "r": [
+    0.022,
+    0.016,
+    0.022
+   ]
+  },
+  "w05": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.3,
+    -0.04,
+    1.5576
+   ],
+   "r": [
+    0.012,
+    0.012,
+    0.022
+   ]
+  },
+  "w06": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.5,
+    -0.015,
+    1.6004
+   ],
+   "r": [
+    0.034,
+    0.018,
+    0.022
+   ]
+  },
+  "w06p": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "colour": "pale",
+   "core": true,
+   "at": [
+    -0.5,
+    -0.015,
+    1.6034
+   ],
+   "r": [
+    0.017,
+    0.009,
+    0.024
+   ]
+  },
+  "w07": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.47,
+    0.035,
+    1.5937
+   ],
+   "r": [
+    0.012,
+    0.01,
+    0.022
+   ]
+  },
+  "w08": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.49,
+    0.02,
+    1.5997
+   ],
+   "r": [
+    0.036,
+    0.016,
+    0.022
+   ]
+  },
+  "w09": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.53,
+    -0.03,
+    1.5916
+   ],
+   "r": [
+    0.012,
+    0.011,
+    0.022
+   ]
+  },
+  "w10": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.64,
+    0.005,
+    1.5879
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.022
+   ]
+  },
+  "w11": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.71,
+    -0.015,
+    1.58
+   ],
+   "r": [
+    0.014,
+    0.011,
+    0.022
+   ]
+  },
+  "w11p": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "colour": "pale",
+   "core": true,
+   "at": [
+    -0.71,
+    -0.015,
+    1.583
+   ],
+   "r": [
+    0.007,
+    0.0055,
+    0.024
+   ]
+  },
+  "w12": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.63,
+    -0.012,
+    1.5877
+   ],
+   "r": [
+    0.026,
+    0.018,
+    0.022
+   ]
+  },
+  "w12p": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "colour": "pale",
+   "core": true,
+   "at": [
+    0.63,
+    -0.012,
+    1.5907
+   ],
+   "r": [
+    0.013,
+    0.009,
+    0.024
+   ]
+  },
+  "w13": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.7,
+    0.012,
+    1.5817
+   ],
+   "r": [
+    0.022,
+    0.012,
+    0.022
+   ]
+  },
+  "w14": {
+   "kind": "blob",
+   "space": "body",
+   "label": "hand_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.835,
+    -0.01,
+    1.5447
+   ],
+   "r": [
+    0.016,
+    0.013,
+    0.022
+   ]
+  },
+  "w15": {
+   "kind": "blob",
+   "space": "body",
+   "label": "hand_l",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.8,
+    0.025,
+    1.5414
+   ],
+   "r": [
+    0.009,
+    0.009,
+    0.022
+   ]
+  },
+  "w16": {
+   "kind": "blob",
+   "space": "body",
+   "label": "hand_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.83,
+    0.012,
+    1.5446
+   ],
+   "r": [
+    0.015,
+    0.012,
+    0.022
+   ]
+  },
+  "w17": {
+   "kind": "blob",
+   "space": "body",
+   "label": "hand_r",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.8,
+    -0.025,
+    1.5414
+   ],
+   "r": [
+    0.009,
+    0.009,
+    0.022
+   ]
+  },
+  "w18": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    0.125,
+    0.105,
+    1.4997
+   ],
+   "r": [
+    0.02,
+    0.016,
+    0.022
+   ]
+  },
+  "w19": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "wound",
+   "core": true,
+   "at": [
+    -0.2,
+    0.09,
+    1.4844
+   ],
+   "r": [
+    0.013,
+    0.012,
+    0.022
+   ]
+  }
+ },
+ "head_scale": 1.195,
+ "note": "The small dull red marks on the sculpt are sores: paint each one where the sculpt has it and at the size the sculpt has it, as a small dull brownish-red sore with a pale yellowish centre, on the shoulders, the upper back, the upper arms, the forearms and the backs of the hands, the large one on the upper back on the right of the picture with a pale rim.",
+ "face_tilt": "under the ragged ends of the hair a heavy brow in shadow, the short bridge and tip of the nose, and the upper lip. Brow, nose and upper lip sit close together, squeezed flat by the steep view, and the upper lip is the bottom edge of the head, with the chest starting directly below it.",
+ "hair": [
+  74,
+  70,
+  60
+ ],
+ "colours": {
+  "wound": [
+   116,
+   66,
+   56
+  ],
+  "pale": [
+   178,
+   162,
+   126
+  ]
+ },
+ "jaw": 0.7,
+ "cap": {
+  "thick": 1.1,
+  "label": "hair"
+ },
+ "skin_words": "muddy olive-khaki grey skin, desaturated and warm, its lighter highlights",
+ "line_words": "crisp, dark olive-grey contour line",
+ "symmetry_words": "the body left-right symmetric in shape"
+}

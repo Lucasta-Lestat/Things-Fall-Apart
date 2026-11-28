@@ -1,0 +1,127 @@
+{
+ "base": "newt_base",
+ "pack": "newt_female/default",
+ "shoulder_half": 0.3148,
+ "delt_r": 0.0916,
+ "trunk_depth_n": 0.1436,
+ "chest_depth_s": 0.1868,
+ "belly_depth_s": 0.1686,
+ "belly_half": 0.1839,
+ "pec_half": 0.1183,
+ "upper_arm_r": [
+  0.0743,
+  0.0608
+ ],
+ "forearm_r": [
+  0.0753,
+  0.0502
+ ],
+ "elbow_x": 0.548,
+ "wrist_x": 0.772,
+ "palm_rx": 0.0821,
+ "palm_ry": 0.0636,
+ "finger_r": 0.0144,
+ "foot_x_tilt": 0.1351,
+ "foot_w": 0.0528,
+ "toe_y_tilt": 0.1758,
+ "leg_r": [
+  0.077,
+  0.0512
+ ],
+ "skin": [
+  216,
+  98,
+  69
+ ],
+ "swatch": {
+  "src": "Rigs/races/newt_female/default/body.png",
+  "box": [
+   690,
+   95,
+   800,
+   165
+  ]
+ },
+ "look": "a female newt-folk with smooth orange-red skin, a broad round salamander head with two large round dark eyes set wide apart, a compact sturdy build and a thick tail",
+ "torso_tilt": "first the top plane of a smooth chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one smooth chest with a flat upper belly below it",
+ "arms_paint": "smooth rounded shoulders across the shoulder band; level arms with soft, lightly defined muscle",
+ "features": {
+  "tail": {
+   "len": 0.42,
+   "r": [
+    0.09,
+    0.02
+   ],
+   "curl": 180,
+   "side": -1,
+   "paint": "the tail as a thick smooth tapering tail in the same orange-red skin",
+   "tip": 0.42,
+   "guide": "Behind the character a tail lies on the floor: it comes out past the back, curls round toward the left of the picture, passes under the arm and runs forward to a tapering tip beside the feet.",
+   "tip_curl": 20,
+   "taper": 2.4,
+   "root_y": -0.02
+  },
+  "bust": null,
+  "snout": {
+   "len": 0.3,
+   "r": [
+    0.85,
+    0.7
+   ],
+   "root": [
+    0.0,
+    0.7,
+    -0.35
+   ]
+  },
+  "eyes": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.74,
+    0.74,
+    0.0
+   ],
+   "r": [
+    0.33,
+    0.33,
+    0.3
+   ],
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  }
+ },
+ "symmetry_words": "the body left-right symmetric",
+ "head_scale": 1.565,
+ "depth_band": [
+  0.22,
+  0.31
+ ],
+ "notes": [
+  "depth band widened to 0.310: with the legacy head size the humanoid figure is 0.298 deep (the head, not the camera, sets the depth)",
+  "painter 2026-11-28: head made broad (face cap wide 1.2) with eye bulges and a short snout, bust removed (the legacy painting has none), short blunt toes, tail pulled in under the arm; head_scale re-solved to 1.54"
+ ],
+ "cap": {
+  "thick": 1.0,
+  "label": "face",
+  "wide": 1.2,
+  "deep": 0.92,
+  "tall": 1.0
+ },
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "claw": 0.0,
+  "spread": 0.4,
+  "toe_len": 0.85
+ },
+ "head_back": 0.03,
+ "brow": 0.75,
+ "face_tilt": "two round bulging eyes set wide apart at the sides, and between and in front of them a short broad salamander snout with a wide rounded tip and two small nostrils. Eyes and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a broad smooth rounded skull seen from above, with a few small darker freckles on the crown, and, in the narrow strip along its bottom edge, a natural newt-folk face strongly foreshortened from above: two large round dark brown eyes set wide apart and a short broad rounded snout with two small nostrils",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a small broad foot front with four short rounded toes.",
+ "feet_paint": "each foot front with four short soft toes with rounded tips",
+ "hands_paint": "each hand with a thumb and four soft fingers with rounded tips"
+}

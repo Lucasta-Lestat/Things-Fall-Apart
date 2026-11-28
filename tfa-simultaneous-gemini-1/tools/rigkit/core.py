@@ -48,19 +48,38 @@ def race_dir(race, variant="default"):
     return os.path.join(RIGS, "races", race, variant)
 
 
+# Keys a pack measures from its OWN label map. A variant with its own labels (a new build) never
+# takes these from its parent: a child whose camera hides the legs must not inherit leg frames.
+DERIVED_KEYS = ("frames", "parts", "overlays", "notes", "size", "pinned", "auto_pinned")
+
+
+def merge_variant(base, own):
+    """A variant's data over its parent's. A re-skin (no "labels" of its own) holds only art: every
+    missing key, and every missing frame, falls through to the parent. A new build (own "labels")
+    inherits identity and scale only; everything in DERIVED_KEYS is its own or absent.
+    Mirrored by RigLibrary.merge_variant."""
+    merged = dict(base)
+    if "labels" in own:
+        for k in DERIVED_KEYS:
+            merged.pop(k, None)
+        merged.update(own)
+        merged["frames"] = dict(own.get("frames", {}))
+    else:
+        merged.update(own)
+        merged["frames"] = dict(base.get("frames", {}), **own.get("frames", {}))
+    return merged
+
+
 def load_race(race, variant="default"):
-    """A variant may hold only art: missing keys fall through to `inherits`."""
+    """A variant may hold only art: missing keys fall through to `inherits` (see merge_variant)."""
     d = race_dir(race, variant)
     data = load_json(os.path.join(d, "race.json"))
     data["_dir"] = d
     parent = data.get("inherits")
     if parent:
         base = load_race(race, parent)
-        merged = dict(base)
-        merged.update(data)
-        merged["frames"] = dict(base.get("frames", {}), **data.get("frames", {}))
-        merged["_parent_dir"] = base["_dir"]
-        data = merged
+        data = merge_variant(base, data)
+        data["_parent_dir"] = base["_dir"]
     return data
 
 

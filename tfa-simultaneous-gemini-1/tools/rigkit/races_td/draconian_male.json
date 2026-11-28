@@ -1,0 +1,87 @@
+{
+ "base": "draconian_base",
+ "pack": "draconian_male/default",
+ "shoulder_half": 0.3073,
+ "elbow_x": 0.5564,
+ "wrist_x": 0.7786,
+ "palm_rx": 0.0797,
+ "palm_ry": 0.0756,
+ "finger_r": 0.0171,
+ "foot_x_tilt": 0.1563,
+ "foot_w": 0.075,
+ "skin": [
+  115,
+  38,
+  34
+ ],
+ "swatch": {
+  "src": "Rigs/races/draconian_male/default/body.png",
+  "box": [
+   669,
+   63,
+   764,
+   193
+  ]
+ },
+ "look": "a male draconian, a dragon-folk covered in dark crimson-red scales, with a horned wedge-shaped reptile head, amber eyes, and a heavy muscular build",
+ "features": {
+  "snout": {
+   "len": 0.95,
+   "r": [
+    0.72,
+    0.42
+   ]
+  },
+  "horns": {
+   "style": "swept",
+   "len": 1.8,
+   "r": [
+    0.24,
+    0.03
+   ],
+   "root": [
+    0.66,
+    -0.3,
+    0.85
+   ],
+   "paint": "the two horns as ridged horn of a warm dusty tan-brown"
+  },
+  "cheek_spines": {
+   "kind": "horns",
+   "style": "wide",
+   "len": 0.6,
+   "r": [
+    0.13,
+    0.02
+   ],
+   "root": [
+    0.82,
+    0.05,
+    -0.05
+   ],
+   "curl": 25,
+   "guide": "A short spine points sideways and back from each cheek.",
+   "paint": "the cheek spines in the same warm tan-brown horn"
+  }
+ },
+ "head_scale": 1.173,
+ "colours": {
+  "horn": [
+   158,
+   122,
+   102
+  ]
+ },
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "toe_len": 0.95,
+  "spread": 0.34,
+  "claw": 0.7
+ },
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four short toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four short scaled toes ending in dark claws",
+ "note": "A single row of raised chevron scales runs down the midline of the skull and the snout.",
+ "hands_paint": "each hand scaled, with five well-formed fingers that end in short dark claws",
+ "arms_paint": "the shoulder band and the level arms covered all over in small overlapping scales over firm muscle"
+}

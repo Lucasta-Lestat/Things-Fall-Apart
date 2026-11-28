@@ -1,0 +1,113 @@
+{
+ "base": "goatmen_base",
+ "pack": "goatmen_female/default",
+ "shoulder_half": 0.2975,
+ "delt_r": 0.0931,
+ "trunk_depth_n": 0.1461,
+ "chest_depth_s": 0.1897,
+ "belly_depth_s": 0.1711,
+ "belly_half": 0.1857,
+ "pec_half": 0.1195,
+ "upper_arm_r": [
+  0.0759,
+  0.0621
+ ],
+ "forearm_r": [
+  0.0816,
+  0.0544
+ ],
+ "elbow_x": 0.53,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.0658,
+ "finger_r": 0.0149,
+ "foot_x_tilt": 0.1302,
+ "foot_w": 0.0544,
+ "toe_y_tilt": 0.1776,
+ "leg_r": [
+  0.0779,
+  0.0517
+ ],
+ "skin": [
+  112,
+  85,
+  60
+ ],
+ "swatch": {
+  "src": "Rigs/races/goatmen_female/default/body.png",
+  "box": [
+   240,
+   111,
+   390,
+   230
+  ]
+ },
+ "look": "a female goat-folk with shaggy warm brown fur, a goat head with a long paler tan muzzle, two long ridged grey-brown horns that sweep back and curve outward, and long level leaf-shaped ears",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one athletic chest with two pectoral muscles and a flat upper belly below them",
+ "features": {
+  "horns": {
+   "style": "swept",
+   "dir": [
+    0.22,
+    -0.8,
+    0.55
+   ],
+   "toward": [
+    1.0,
+    0.25,
+    -0.5
+   ],
+   "curl": 125,
+   "len": 2.5,
+   "r": [
+    0.33,
+    0.09
+   ],
+   "root": [
+    0.4,
+    -0.2,
+    0.88
+   ],
+   "guide": "A long ridged horn grows from each side of the top of the head, sweeps backward and curves outward to a tip that points sideways.",
+   "paint": "the two horns as grey-brown horn ringed with ridges"
+  },
+  "ears": {
+   "kind": "blob",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "at": [
+    1.55,
+    0.05,
+    -0.25
+   ],
+   "r": [
+    0.8,
+    0.3,
+    0.14
+   ],
+   "mirror": true,
+   "guide": "A long leaf-shaped goat ear sticks out level from each side of the head and lies over the shoulder.",
+   "paint": "each ear as a furred leaf-shaped ear with a pale pink inner hollow"
+  }
+ },
+ "head_scale": 1.245,
+ "colours": {
+  "horn": [
+   125,
+   108,
+   89
+  ]
+ },
+ "ear_len": 0.0,
+ "ear_tilt": [
+  0.042,
+  0.0,
+  -0.03
+ ],
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a long goat muzzle that juts forward to a soft nose. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a furred top of the skull seen from above with, in the narrow strip along its bottom edge, a natural goat-folk face strongly foreshortened from above, a furred brow over shadowed amber eyes and a long paler tan goat muzzle with a small pink-brown nose",
+ "hands_paint": "each hand furred on its back, with five well-formed fingers ending in short dark hoof-like nails"
+}

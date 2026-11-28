@@ -1,0 +1,66 @@
+{
+ "base": "vampire_base",
+ "pack": "vampire_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.1105,
+ "trunk_depth_n": 0.174,
+ "chest_depth_s": 0.2225,
+ "belly_depth_s": 0.199,
+ "belly_half": 0.2066,
+ "pec_half": 0.132,
+ "upper_arm_r": [
+  0.0937,
+  0.0767
+ ],
+ "forearm_r": [
+  0.0893,
+  0.0595
+ ],
+ "elbow_x": 0.5645,
+ "wrist_x": 0.7702,
+ "palm_rx": 0.0827,
+ "palm_ry": 0.0671,
+ "finger_r": 0.0152,
+ "foot_x_tilt": 0.1499,
+ "foot_w": 0.0511,
+ "toe_y_tilt": 0.1979,
+ "leg_r": [
+  0.0885,
+  0.0565
+ ],
+ "skin": [
+  220,
+  216,
+  193
+ ],
+ "cap": {
+  "thick": 1.06,
+  "label": "hair"
+ },
+ "hair": [
+  50,
+  59,
+  64
+ ],
+ "swatch": {
+  "src": "Rigs/races/vampire_male/default/body.png",
+  "box": [
+   209,
+   66,
+   359,
+   211
+  ]
+ },
+ "look": "a clean-shaven vampire man with ashen cream-pale skin, blue-black hair slicked straight back from a widow's peak, pointed ears and a broad, powerful muscular build",
+ "dome": "cap of blue-black hair slicked straight back in combed strands",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "face_paint": "the head as a cap of blue-black hair combed straight back, seen from above, its hairline a widow's peak, with, in the narrow strip along its bottom edge, a natural clean-shaven vampire face strongly foreshortened from above, a heavy furrowed brow over shadowed eyes, a long straight nose in the same pale skin colour, closed lips and the front of the chin",
+ "features": {},
+ "notes": [
+  "head-size rule: the legacy head frame (0.149 of the half span) is a circle on the hair mass; skull built at 0.141, hair cap x1.06"
+ ],
+ "head_scale": 1.313,
+ "head_pivot_z": 1.7,
+ "head_back": -0.012
+}

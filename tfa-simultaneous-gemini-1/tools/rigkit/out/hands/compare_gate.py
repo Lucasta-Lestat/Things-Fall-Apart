@@ -11,7 +11,7 @@ import statistics as st
 HERE = os.path.dirname(os.path.abspath(__file__))
 B = json.load(open(os.path.join(HERE, "before", "fit_before.json")))["rows"]
 A = json.load(open(os.path.join(HERE, "fit_after.json")))["rows"]
-FOCUS = [("orc", "tilt15_head"), ("human", "default"), ("goblin_male", "default")]
+FOCUS = [("orc", "default"), ("human", "default"), ("goblin_male", "default")]
 
 
 def pick(rows, item, race=None, variant=None, pose=None):

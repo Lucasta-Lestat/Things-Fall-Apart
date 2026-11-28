@@ -1,0 +1,74 @@
+{
+ "base": "dhampir_base",
+ "pack": "dhampir_male/default",
+ "shoulder_half": 0.333,
+ "delt_r": 0.103,
+ "trunk_depth_n": 0.1619,
+ "chest_depth_s": 0.2083,
+ "belly_depth_s": 0.1869,
+ "belly_half": 0.1976,
+ "pec_half": 0.1266,
+ "upper_arm_r": [
+  0.086,
+  0.0704
+ ],
+ "forearm_r": [
+  0.0806,
+  0.0538
+ ],
+ "elbow_x": 0.5415,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.067,
+ "finger_r": 0.0151,
+ "foot_x_tilt": 0.1478,
+ "foot_w": 0.0511,
+ "toe_y_tilt": 0.1891,
+ "leg_r": [
+  0.0839,
+  0.0544
+ ],
+ "skin": [
+  230,
+  227,
+  204
+ ],
+ "cap": {
+  "thick": 1.06,
+  "label": "hair"
+ },
+ "hair": [
+  52,
+  52,
+  60
+ ],
+ "swatch": {
+  "src": "Rigs/races/dhampir_male/default/body.png",
+  "box": [
+   225,
+   41,
+   375,
+   174
+  ]
+ },
+ "look": "a dhampir man with chalk-pale skin, short black hair combed straight back and a lean, slim build",
+ "dome": "cap of short black hair combed straight back",
+ "torso_tilt": "first the top plane of the chest, then, tucked under it, a short glimpse of the upper belly.",
+ "torso_paint": "the torso lean and smooth with soft, gentle modelling",
+ "face_paint": "the head as a cap of short black hair seen from above, combed straight back in separate soft strands with a dull blue-grey sheen, its hairline coming to a pointed widow's peak at the middle of the forehead, with a small ear lying close against each side of the hair and, squeezed into the thin strip along its bottom edge exactly as small as the sculpt has it, a dhampir face strongly foreshortened from above in the same chalk-pale skin all over: two dark slanted brows right under the hairline, the nose tip, and the front of the chin",
+ "features": {},
+ "notes": [
+  "head-size rule: the legacy head frame (0.147 of the half span) is a circle on the hair mass; skull built at 0.139, hair cap x1.06"
+ ],
+ "head_scale": 1.287,
+ "ear_len": 0.022,
+ "ear_tilt": [
+  0.02,
+  0.05,
+  0.004
+ ],
+ "face_tilt": "the fringe of the hair, right under it the brow shading the eye sockets into two dark slits, then the bridge and tip of the nose, and just behind the nose the lips and the front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "line_words": "thin, continuous, near-black charcoal contour line (about RGB 45 40 38) of even width, fully closed around every finger and toe",
+ "arms_paint": "smooth lean shoulders across the shoulder band; level slim arms with soft, gentle modelling",
+ "finish": "chalky matte skin with soft matte shading and broad dull highlights"
+}

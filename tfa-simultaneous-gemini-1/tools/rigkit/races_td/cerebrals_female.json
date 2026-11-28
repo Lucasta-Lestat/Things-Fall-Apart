@@ -1,0 +1,91 @@
+{
+ "base": "cerebrals_base",
+ "pack": "cerebrals_female/default",
+ "shoulder_half": 0.3081,
+ "delt_r": 0.0744,
+ "trunk_depth_n": 0.116,
+ "chest_depth_s": 0.1545,
+ "belly_depth_s": 0.141,
+ "belly_half": 0.1633,
+ "pec_half": 0.106,
+ "upper_arm_r": [
+  0.0568,
+  0.0464
+ ],
+ "forearm_r": [
+  0.0566,
+  0.0377
+ ],
+ "elbow_x": 0.5515,
+ "wrist_x": 0.7642,
+ "palm_rx": 0.0849,
+ "palm_ry": 0.0577,
+ "finger_r": 0.013,
+ "foot_x_tilt": 0.1356,
+ "foot_w": 0.0492,
+ "toe_y_tilt": 0.1558,
+ "leg_r": [
+  0.0666,
+  0.0464
+ ],
+ "skin": [
+  205,
+  165,
+  200
+ ],
+ "cap": {
+  "thick": 1.811,
+  "label": "face",
+  "tall": 0.85
+ },
+ "swatch": {
+  "src": "Rigs/races/cerebrals_female/default/body.png",
+  "box": [
+   671,
+   177,
+   762,
+   255
+  ]
+ },
+ "look": "a female cerebral, a slight alien humanoid woman with smooth pale lilac skin, a very large bald domed cranium, large heavy-lidded eyes with pale whites and dusky mauve irises, and slender limbs",
+ "features": {
+  "ears": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    1.13,
+    0.62,
+    -0.3
+   ],
+   "r": [
+    0.16,
+    0.2,
+    0.3
+   ],
+   "mirror": true,
+   "label": "face",
+   "core": false,
+   "guide": "A small rounded ear lies flat against each side of the head, low down beside the face.",
+   "paint": "a small rounded ear flat against each side of the head"
+  }
+ },
+ "head_scale": 1.25,
+ "depth_band": [
+  0.22,
+  0.391
+ ],
+ "notes": [
+  "depth band widened to 0.391: with the legacy head size the humanoid figure is 0.379 deep (the head, not the camera, sets the depth)",
+  "installed 2026-11-28 from r2_3; after install_plan run tools/rigkit/out/plan/cerebrals_female/fix_head_ring.py then build_race (snap_head leaves the head's contour line as a ring of body label round the cranium, which stretches the torso frame to the top of the head)",
+  "ears are a head-space blob so the small legacy ears show at the sides of the face; eyes are pale whites with mauve irises as in the legacy painting (the base says dark almond)"
+ ],
+ "face_tilt": "a smooth brow over two large heavy-lidded eyes, a small nose and a small narrow chin. Eyes, nose and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a very large smooth bald cranium seen from above with, in the narrow strip along its bottom edge, a natural cerebral face strongly foreshortened from above, two large heavy-lidded eyes with pale whites and dusky mauve irises, a small nose and a small closed mouth on a narrow chin",
+ "face_scale": 1.2,
+ "nose_tilt": [
+  0.0,
+  0.6
+ ],
+ "finish": "chalky, powdery matte skin like dry unglazed clay",
+ "note": "The shading is gentle and diffuse: every lighter area is faint, broad and feather-soft, fading gradually into the surrounding skin, and the scalp is one even lilac dome with a faint soft glow at the crown. The face stays small inside the narrow strip at the bottom edge of the head."
+}

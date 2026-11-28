@@ -1,0 +1,73 @@
+{
+ "base": "draconian_base",
+ "pack": "draconian_female/default",
+ "shoulder_half": 0.3078,
+ "elbow_x": 0.5559,
+ "wrist_x": 0.7789,
+ "palm_rx": 0.0796,
+ "palm_ry": 0.0725,
+ "finger_r": 0.0164,
+ "foot_x_tilt": 0.1566,
+ "foot_w": 0.0746,
+ "skin": [
+  151,
+  74,
+  49
+ ],
+ "swatch": {
+  "src": "Rigs/races/draconian_female/default/body.png",
+  "box": [
+   669,
+   64,
+   764,
+   190
+  ]
+ },
+ "look": "a female draconian, a dragon-folk with orange-red scales, a horned reptile head with a broad blunt snout, and a heavy muscular build",
+ "features": {
+  "cheek_spikes": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "a": [
+    0.8,
+    0.3,
+    -0.3
+   ],
+   "b": [
+    1.3,
+    0.02,
+    -0.25
+   ],
+   "r": [
+    0.12,
+    0.02
+   ],
+   "mirror": true,
+   "guide": "A short pale spike points out and back from each cheek.",
+   "paint": "the two short cheek spikes as pale horn"
+  }
+ },
+ "head_scale": 1.191,
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "spread": 0.36,
+  "toe_len": 1.12
+ },
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four long toes ending in short dark claws",
+ "dome": "scaled top of the skull, plated with rows of small scales and a low ridge of larger scutes down its middle",
+ "face_paint": "the head as a scaled top of the skull seen from above with, in the narrow strip along its bottom edge, a natural draconian face strongly foreshortened from above, a scaled brow over small shadowed amber eyes and a broad blunt snout with two nostrils",
+ "colours": {
+  "horn": [
+   196,
+   166,
+   138
+  ]
+ },
+ "note": "The underside of the chest and the belly are a paler tan, plated with broad belly scutes.",
+ "notes": "Legacy: heavy muscular dragon-woman, orange-rust scales (154,73,45), pale tan belly scutes, two pale swept horns, short cheek spikes, midline scute ridge on skull, amber eyes, clawed hands, 4 clawed toes, no hair, no tail."
+}

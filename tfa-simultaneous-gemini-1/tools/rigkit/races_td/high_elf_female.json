@@ -1,0 +1,101 @@
+{
+ "pack": "high_elf_female/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.0864,
+ "trunk_depth_n": 0.1353,
+ "chest_depth_s": 0.1771,
+ "belly_depth_s": 0.1603,
+ "belly_half": 0.1777,
+ "pec_half": 0.1146,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.12,
+ "upper_arm_r": [
+  0.0691,
+  0.0565
+ ],
+ "forearm_r": [
+  0.0682,
+  0.0455
+ ],
+ "elbow_x": 0.59,
+ "wrist_x": 0.8049,
+ "palm_rx": 0.0702,
+ "palm_ry": 0.0634,
+ "finger_r": 0.0143,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.1304,
+ "foot_w": 0.0546,
+ "toe_y_tilt": 0.1698,
+ "leg_r": [
+  0.0739,
+  0.0498
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "skin": [
+  221,
+  175,
+  148
+ ],
+ "cap": {
+  "thick": 1.695,
+  "label": "hair"
+ },
+ "hair": [
+  232,
+  171,
+  42
+ ],
+ "tusk_x_tilt": 0.046,
+ "ear_tilt": [
+  0.026,
+  0.1,
+  0.03
+ ],
+ "swatch": {
+  "src": "Rigs/races/high_elf_female/default/body.png",
+  "box": [
+   731,
+   176,
+   805,
+   279
+  ]
+ },
+ "look": "a high elf woman with fair skin, long wavy golden hair, long pointed ears and a slender build",
+ "dome": "cap of long wavy golden hair",
+ "dome_cover_tilt": "hair",
+ "skin_words": "fair skin, its lighter highlights",
+ "line_words": "crisp, dark brown contour line",
+ "face_tilt": "the fringe of the hair, right under it the brow shading the eye sockets into two dark slits, then the bridge and tip of the nose, and just behind the nose the lips and the front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it. A long pointed ear sticks out sideways from each side of the head.",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a cap of long wavy golden hair seen from above with, in the narrow strip along its bottom edge, a natural high elf face strongly foreshortened from above, calm brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_long": {
+   "width": 2.7,
+   "depth": 1.25,
+   "back": 0.75
+  },
+  "locks": {},
+  "bust": {
+   "size": 0.6
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.254 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.69"
+ ],
+ "head_scale": 1.355
+}

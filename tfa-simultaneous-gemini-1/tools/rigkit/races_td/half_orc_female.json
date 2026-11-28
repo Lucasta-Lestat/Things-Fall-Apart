@@ -1,0 +1,146 @@
+{
+ "base": "half_orc_base",
+ "pack": "half_orc_female/default",
+ "shoulder_half": 0.3293,
+ "delt_r": 0.075,
+ "trunk_depth_n": 0.1575,
+ "chest_depth_s": 0.2031,
+ "belly_depth_s": 0.205,
+ "belly_half": 0.215,
+ "pec_half": 0.105,
+ "upper_arm_r": [
+  0.078,
+  0.072
+ ],
+ "forearm_r": [
+  0.07,
+  0.055
+ ],
+ "elbow_x": 0.5484,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.0757,
+ "finger_r": 0.0171,
+ "foot_x_tilt": 0.1532,
+ "foot_w": 0.0595,
+ "toe_y_tilt": 0.1859,
+ "leg_r": [
+  0.0822,
+  0.0536
+ ],
+ "skin": [
+  129,
+  121,
+  56
+ ],
+ "cap": {
+  "thick": 1.354,
+  "label": "hair",
+  "wide": 1.12
+ },
+ "hair": [
+  104,
+  80,
+  60
+ ],
+ "swatch": {
+  "src": "Rigs/races/half_orc_female/default/body.png",
+  "box": [
+   655,
+   161,
+   736,
+   263
+  ]
+ },
+ "look": "a heavy-set half-orc woman with olive-green skin, a wide shaggy mane of warm mid-brown hair, long pointed ears, two lower tusks and a soft, plump, full-figured build",
+ "dome": "wide shaggy mane of warm mid-brown hair",
+ "dome_cover_tilt": "hair",
+ "torso_tilt": "first the top plane of the chest, then two soft round breasts resting side by side below the chin, then, tucked under them, a short glimpse of the soft rounded belly.",
+ "torso_paint": "the torso as a woman's soft chest with two full round breasts and a soft rounded belly below them, all in smooth fat without muscle lines",
+ "face_paint": "the head as a wide shaggy mane of warm mid-brown hair seen from above, its tousled locks spreading sideways over the roots of the ears and curling outward at the edge, with, in the narrow strip along its bottom edge, a natural half-orc woman's face strongly foreshortened from above, a low brow over shadowed eye slits, a broad olive-green nose tip and a rounded jaw with two ivory tusks and two small teeth between them",
+ "arms_paint": "soft sloping shoulders across the shoulder band; level arms that are plump smooth tapering tubes of soft flesh",
+ "features": {
+  "hair_bushy": {
+   "count": 15,
+   "radius": 1.22,
+   "size": 0.45,
+   "z": 0.0,
+   "arc": [
+    60,
+    300
+   ]
+  },
+  "hair_side": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "at": [
+    1.38,
+    -0.05,
+    0.0
+   ],
+   "r": [
+    0.6,
+    0.7,
+    0.45
+   ],
+   "mirror": true
+  },
+  "hair_side2": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "at": [
+    1.25,
+    0.55,
+    -0.1
+   ],
+   "r": [
+    0.45,
+    0.45,
+    0.4
+   ],
+   "mirror": true
+  },
+  "bust": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "at": [
+    0.125,
+    0.15,
+    1.28
+   ],
+   "r": [
+    0.105,
+    0.075,
+    0.085
+   ],
+   "mirror": true
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.203 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.35",
+  "depth band widened to 0.317: with the legacy head size the humanoid figure is 0.305 deep (the head, not the camera, sets the depth)",
+  "corrective pass: softer proxy (delt, arms, belly), bust as blobs, side hair lobes; gen_plan's swatch sentence hard-codes 'per muscle' / 'lines separating the muscles', so this race is generated with --text-file out/plan/half_orc_female/prompt_soft.txt (the built prompt with those two phrases replaced)"
+ ],
+ "head_scale": 1.29,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.317
+ ],
+ "anat": {
+  "ear_len": 0.125,
+  "ear_tilt": [
+   0.028,
+   0.02,
+   0.03
+  ]
+ },
+ "note": "She is a plump, soft-bodied woman: smooth rounded limbs, full round breasts and a soft belly, painted with broad flat matte shading over smooth rounded forms, with one faint wide highlight per limb. Her head keeps exactly the sculpt's proportions, the tousled hair covering most of it and the small face tucked along its lower edge.",
+ "finish": "dry chalky matte skin like gouache on paper"
+}

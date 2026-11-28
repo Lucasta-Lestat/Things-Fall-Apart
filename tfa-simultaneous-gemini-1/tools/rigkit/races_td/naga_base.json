@@ -1,0 +1,48 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "foot": {
+  "kind": "claw",
+  "toes": 3
+ },
+ "dome": "smooth scaled top of the skull",
+ "dome_cover_tilt": "skull",
+ "skin_words": "lavender scales, its lighter highlights",
+ "line_words": "crisp, dark violet contour line",
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a broad flat snake snout that juts forward to a rounded tip. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a smooth scaled top of the skull seen from above with, in the narrow strip along its bottom edge, a natural naga face strongly foreshortened from above, a smooth scaled brow over two slit eyes and a broad flat snake snout",
+ "arms_paint": "the shoulder band and the level arms covered in small overlapping scales over firm muscle",
+ "hands_paint": "each hand with five well-formed fingers that end in short dark claws",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with three long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with three long toes ending in short dark claws",
+ "swatch_of": "scaled skin",
+ "finish": "matte scaled skin",
+ "features": {
+  "snout": {
+   "len": 0.65,
+   "r": [
+    0.62,
+    0.46
+   ]
+  }
+ },
+ "head_pivot_z": 1.76,
+ "head_back": -0.02
+}

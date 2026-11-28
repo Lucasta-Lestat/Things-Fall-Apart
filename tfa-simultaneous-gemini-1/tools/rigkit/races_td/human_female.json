@@ -1,0 +1,108 @@
+{
+ "base": "human_base",
+ "pack": "human_female/default",
+ "shoulder_half": 0.3417,
+ "delt_r": 0.0868,
+ "trunk_depth_n": 0.1359,
+ "chest_depth_s": 0.1778,
+ "belly_depth_s": 0.1609,
+ "belly_half": 0.1782,
+ "pec_half": 0.1149,
+ "skull_r": 0.108,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk_x": 0.05,
+ "upper_arm_r": [
+  0.0695,
+  0.0568
+ ],
+ "forearm_r": [
+  0.0718,
+  0.0478
+ ],
+ "elbow_x": 0.568,
+ "wrist_x": 0.7765,
+ "palm_rx": 0.0805,
+ "palm_ry": 0.0605,
+ "finger_r": 0.0137,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.138,
+ "foot_w": 0.0515,
+ "toe_y_tilt": 0.1702,
+ "leg_r": [
+  0.0741,
+  0.0499
+ ],
+ "skin": [
+  219,
+  171,
+  144
+ ],
+ "cap": {
+  "thick": 1.416,
+  "label": "hair",
+  "wide": 1.3,
+  "deep": 0.86
+ },
+ "hair": [
+  154,
+  80,
+  50
+ ],
+ "tusk_x_tilt": 0.046,
+ "swatch": {
+  "src": "Rigs/races/human_female/default/body.png",
+  "box": [
+   680,
+   131,
+   772,
+   225
+  ]
+ },
+ "look": "a human woman with fair, lightly rosy skin, thick wavy shoulder-length copper-auburn hair and a slim build",
+ "dome": "mass of thick wavy copper-auburn hair",
+ "skin_words": "warm skin, its lighter highlights",
+ "line_words": "crisp, dark brown contour line",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a mass of thick wavy copper-auburn hair seen from above, painted as broad flowing wavy locks parted along the middle, with, in the narrow strip along its bottom edge under a wavy fringe, a natural human face strongly foreshortened from above, shadowed eyes, a small nose tip, closed lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_bushy": {
+   "size": 0.45,
+   "radius": 1.25,
+   "count": 13,
+   "core": false,
+   "arc": [
+    60,
+    300
+   ]
+  },
+  "hair_long": {
+   "width": 2.3,
+   "depth": 1.1,
+   "back": 0.8,
+   "drop": 1.6
+  },
+  "bust": {
+   "size": 0.6
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.212 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.42",
+  "depth band widened to 0.311: with the legacy head size the humanoid figure is 0.299 deep (the head, not the camera, sets the depth)",
+  "hair: cap widened (wide 1.3, deep 0.86) and bushy ring made non-core so the guide carries the legacy wide hair mass; headsize 1.01",
+  "installed pack = r1_3 with --guide out/plan/human_female/r1fix (fix_hair_labels.py r1 3): the painted hair is smaller than the guide lumps, so the hair label is re-cut on the painted hair colour; a plain install leaves chest/shoulder skin labelled hair, drawn above shirts and robes"
+ ],
+ "head_scale": 1.384,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.311
+ ]
+}

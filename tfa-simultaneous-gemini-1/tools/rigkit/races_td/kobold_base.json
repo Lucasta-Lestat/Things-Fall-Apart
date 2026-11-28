@@ -1,0 +1,58 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "elbow_x": 0.53,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "foot": {
+  "kind": "claw",
+  "toes": 3
+ },
+ "dome": "scaled top of the skull",
+ "dome_cover_tilt": "skull",
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a narrow scaled snout that juts forward to a pointed tip with two nostrils on top. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one athletic chest with two pectoral muscles and a flat upper belly below them",
+ "face_paint": "the head as a scaled top of the skull seen from above with, in the narrow strip along its bottom edge, a natural kobold face strongly foreshortened from above, a scaled brow over shadowed eyes and a narrow pointed snout with two nostrils",
+ "arms_paint": "the shoulder band and the level arms covered in small overlapping scales over firm muscle",
+ "hands_paint": "each hand with five well-formed fingers that end in short dark claws",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with three long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with three long toes ending in short dark claws",
+ "swatch_of": "scaled skin",
+ "finish": "matte scaled skin",
+ "colours": {
+  "horn": [
+   214,
+   190,
+   140
+  ]
+ },
+ "features": {
+  "snout": {
+   "len": 1.0,
+   "r": [
+    0.5,
+    0.3
+   ]
+  }
+ },
+ "head_pivot_z": 1.76,
+ "head_back": -0.02
+}

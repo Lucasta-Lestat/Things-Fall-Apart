@@ -1,0 +1,69 @@
+{
+ "base": "naga_base",
+ "pack": "naga_female/default",
+ "shoulder_half": 0.293,
+ "delt_r": 0.0928,
+ "trunk_depth_n": 0.1456,
+ "chest_depth_s": 0.1892,
+ "belly_depth_s": 0.1706,
+ "belly_half": 0.1854,
+ "pec_half": 0.1192,
+ "upper_arm_r": [
+  0.0756,
+  0.0619
+ ],
+ "forearm_r": [
+  0.0727,
+  0.0485
+ ],
+ "elbow_x": 0.5405,
+ "wrist_x": 0.7758,
+ "palm_rx": 0.0807,
+ "palm_ry": 0.0612,
+ "finger_r": 0.0138,
+ "foot_x_tilt": 0.1266,
+ "foot_w": 0.0579,
+ "toe_y_tilt": 0.1773,
+ "leg_r": [
+  0.0778,
+  0.0516
+ ],
+ "skin": [
+  150,
+  132,
+  197
+ ],
+ "swatch": {
+  "src": "Rigs/races/naga_female/default/body.png",
+  "box": [
+   658,
+   70,
+   759,
+   176
+  ]
+ },
+ "look": "a female naga, a serpent-folk woman with lavender scales, a smooth snake head with pale silver slit-pupil eyes and a slim soft build",
+ "torso_tilt": "first the top plane of the chest with the soft swell of the bust, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim scaled chest with a gentle bust line and a flat upper belly below it",
+ "features": {
+  "bust": {
+   "size": 0.6
+  }
+ },
+ "head_scale": 1.336,
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "toe_len": 0.8,
+  "spread": 0.16,
+  "claw": 0.12
+ },
+ "dome": "smooth top of the skull, covered in large flat lavender scale plates",
+ "arms_paint": "the shoulder band and the slim level arms covered in small overlapping scales over smooth soft forms",
+ "hands_paint": "each hand with five slender scaled fingers with rounded tips",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a short rounded foot front with four short blunt toes side by side.",
+ "feet_paint": "each foot front with four short blunt scaled toes",
+ "notes": [
+  "legacy painting: blunt four-toed feet and clawless fingers, a bust, no tail; the base's long clawed toes are overridden here"
+ ]
+}

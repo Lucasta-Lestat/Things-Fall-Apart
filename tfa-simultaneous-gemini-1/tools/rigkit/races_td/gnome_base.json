@@ -1,0 +1,36 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.17,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "head_z": 1.76,
+ "tusk_x_tilt": 0.046,
+ "skin_words": "fair cream skin, its lighter highlights",
+ "line_words": "crisp, dark red-brown contour line",
+ "face_tilt": "a brow ridge whose overhang shades the eye sockets into two dark slits, right under it the tip of the nose, and just behind the nose the lips and the front of the jaw. Brow, nose tip and jaw sit close together, squeezed by the steep view, and the jaw is the bottom edge of the head, with the chest starting directly below it.",
+ "head_pivot_z": 1.8,
+ "head_back": -0.03
+}

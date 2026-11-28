@@ -1,0 +1,33 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "dome": "very large smooth bald cranium",
+ "dome_cover_tilt": "scalp",
+ "skin_words": "pale lilac skin, its lighter highlights",
+ "line_words": "crisp, dark plum contour line",
+ "face_tilt": "a smooth brow over two large dark almond eyes, a tiny nose and a small narrow chin. Eyes, nose and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a very large smooth bald cranium seen from above with, in the narrow strip along its bottom edge, a natural cerebral face strongly foreshortened from above, two large dark almond eyes, a tiny nose and a small narrow chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "finish": "matte smooth skin",
+ "head_pivot_z": 1.8,
+ "head_back": -0.03
+}

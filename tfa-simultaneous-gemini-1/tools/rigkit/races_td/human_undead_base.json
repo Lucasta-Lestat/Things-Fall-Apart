@@ -1,0 +1,24 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "skin_words": "grey-green decaying skin, its lighter highlights",
+ "line_words": "crisp, near-black grey-green contour line",
+ "face_tilt": "a bony brow over two deep dark eye sockets, the hollow of the nose and a row of bare teeth along the jaw. Brow, nose hollow and teeth sit close together, squeezed by the steep view, and the jaw is the bottom edge of the head, with the chest starting directly below it."
+}

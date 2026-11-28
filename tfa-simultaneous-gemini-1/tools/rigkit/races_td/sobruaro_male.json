@@ -1,0 +1,62 @@
+{
+ "base": "sobruaro_base",
+ "pack": "sobruaro_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.1148,
+ "trunk_depth_n": 0.1809,
+ "chest_depth_s": 0.2306,
+ "belly_depth_s": 0.2059,
+ "belly_half": 0.2117,
+ "pec_half": 0.1351,
+ "upper_arm_r": [
+  0.0981,
+  0.0803
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "elbow_x": 0.5625,
+ "wrist_x": 0.7648,
+ "palm_rx": 0.0847,
+ "palm_ry": 0.0705,
+ "finger_r": 0.0159,
+ "foot_x_tilt": 0.146,
+ "foot_w": 0.0569,
+ "toe_y_tilt": 0.203,
+ "leg_r": [
+  0.091,
+  0.0577
+ ],
+ "skin": [
+  57,
+  107,
+  61
+ ],
+ "swatch": {
+  "src": "Rigs/races/sobruaro_male/default/body.png",
+  "box": [
+   209,
+   49,
+   359,
+   198
+  ]
+ },
+ "look": "a male sobruaro, a cactus-folk with deep green cactus skin dotted with sparse small pale thorn spines, a ribbed barrel-cactus head and a massive, heavily muscled build",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "features": {},
+ "head_scale": 1.354,
+ "face_scale": 0.72,
+ "brow": 0.6,
+ "jaw": 0.7,
+ "nose_tilt": [
+  0.02,
+  1.5
+ ],
+ "face_tilt": "the ribs of the head running down to a low smooth brow with one small rounded nose nub at its centre. The brow and the nub sit close together, squeezed by the steep view, and the nub is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a smooth barrel cactus seen from above, with five broad rounded ribs running from the back of the head forward to the brow, and, in the narrow strip along its bottom edge, a low shadowed brow with one small rounded nose nub at its centre",
+ "hands_paint": "each hand with five well-formed thick green fingers with knuckles and blunt rounded fingertips",
+ "feet_paint": "each foot front with five short blunt green toes",
+ "note": "Sparse small pale cream thorn spines, each a few pixels long, dot the head, the shoulders, the upper back and the arms, as in the swatch."
+}

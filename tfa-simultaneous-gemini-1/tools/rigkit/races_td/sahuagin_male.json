@@ -1,0 +1,86 @@
+{
+ "base": "sahuagin_base",
+ "pack": "sahuagin_male/default",
+ "shoulder_half": 0.2896,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2066,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "elbow_x": 0.5506,
+ "wrist_x": 0.7649,
+ "palm_rx": 0.0846,
+ "palm_ry": 0.0766,
+ "finger_r": 0.0173,
+ "foot_x_tilt": 0.1469,
+ "foot_w": 0.0601,
+ "toe_y_tilt": 0.2035,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "skin": [
+  59,
+  134,
+  113
+ ],
+ "swatch": {
+  "src": "Rigs/races/sahuagin_male/default/body.png",
+  "box": [
+   658,
+   92,
+   753,
+   246
+  ]
+ },
+ "look": "a male sahuagin, a fish-folk with teal scaled skin, a finned head with a blunt snout, fin-like ears, webbed hands, forearm fins and a tall back fin",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad scaled chest with two full pectoral muscles and a firm paler upper belly below them",
+ "features": {
+  "dorsal_fin": {
+   "h": 0.17
+  },
+  "arm_fins": {
+   "at": 0.38,
+   "size": 0.075
+  },
+  "fin_ears": {
+   "kind": "ears_up",
+   "root": [
+    0.8,
+    -0.1,
+    0.1
+   ],
+   "dir": [
+    0.7,
+    -0.65,
+    0.45
+   ],
+   "len": 1.25,
+   "r": [
+    0.42,
+    0.05
+   ],
+   "flat": 0.3,
+   "guide": "A pointed fin-like ear rises from each side of the head and sweeps up and backward.",
+   "paint": "each ear fin as a thin ribbed membrane between pointed spines"
+  }
+ },
+ "head_scale": 1.195,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "ear_len": 0.0,
+ "foot": {
+  "kind": "claw",
+  "toes": 3,
+  "spread": 0.36,
+  "claw": 0.35,
+  "toe_len": 0.8
+ },
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a blunt fish snout that juts forward to a wide mouth. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it."
+}

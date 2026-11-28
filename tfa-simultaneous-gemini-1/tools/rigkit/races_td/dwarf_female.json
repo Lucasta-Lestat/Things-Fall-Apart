@@ -1,0 +1,60 @@
+{
+ "base": "dwarf_base",
+ "pack": "dwarf_female/default",
+ "shoulder_half": 0.355,
+ "elbow_x": 0.5653,
+ "foot_w": 0.0638,
+ "skin": [
+  183,
+  123,
+  91
+ ],
+ "cap": {
+  "thick": 1.452,
+  "label": "hair"
+ },
+ "hair": [
+  151,
+  103,
+  68
+ ],
+ "swatch": {
+  "src": "Rigs/races/dwarf_female/default/body.png",
+  "box": [
+   665,
+   137,
+   743,
+   261
+  ]
+ },
+ "look": "a dwarf woman with ruddy tan skin, thick ginger-brown hair in heavy braids, a short braided ginger-brown beard and a broad stocky build",
+ "dome": "cap of thick braided ginger-brown hair",
+ "face_paint": "the head as a cap of thick braided ginger-brown hair seen from above with, in the narrow strip along its bottom edge, a natural dwarf face strongly foreshortened from above, calm brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "features": {
+  "locks": {
+   "r": [
+    0.34,
+    0.24
+   ],
+   "len": 1.4,
+   "guide": "A thick braid hangs forward over each collarbone beside the face.",
+   "paint": "each braid as a thick plaited rope of hair"
+  },
+  "bust": {
+   "size": 0.6
+  },
+  "beard": {
+   "len": 1.0,
+   "width": 0.8,
+   "guide": "Below the nose a braided beard hangs over the top of the chest.",
+   "paint": "the beard as braided ginger-brown hair"
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.254 of the half span) is a circle on the hair mass; skull built at 0.175, hair cap x1.45",
+  "depth band widened to 0.309: with the legacy head size the humanoid figure is 0.297 deep (the head, not the camera, sets the depth)",
+  "painter: r1_2 installed as tilt15 (painted on head_scale 1.63). r2 tried head_scale 1.70 + 'tawny light-brown' hair: hair went blond and faces enlarged; r3 (1.70, ginger-brown) gave gloss or beards past the feet. Installed head frame is 0.934 of legacy (snap trims the bumpy braid outline)."
+ ],
+ "head_scale": 1.63,
+ "note": "The hair on the scalp runs in rows of plaits from the fringe back over the crown, and each hanging braid and the beard braid is bound near its end by one dull iron band."
+}

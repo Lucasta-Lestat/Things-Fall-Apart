@@ -1,0 +1,123 @@
+{
+ "base": "human_base",
+ "shoulder_half": 0.27,
+ "delt_r": 0.115,
+ "trunk_depth_n": 0.125,
+ "chest_depth_s": 0.13,
+ "belly_depth_s": 0.12,
+ "belly_half": 0.18,
+ "pec_half": 0.12,
+ "skull_r": 0.09,
+ "nose": [
+  0.011,
+  0.009
+ ],
+ "tusk_x": 0.0,
+ "upper_arm_r": [
+  0.096,
+  0.077
+ ],
+ "forearm_r": [
+  0.071,
+  0.047
+ ],
+ "elbow_x": 0.57,
+ "wrist_x": 0.81,
+ "palm_rx": 0.066,
+ "palm_ry": 0.058,
+ "finger_r": 0.0125,
+ "foot_x": 0.085,
+ "toe_y": 0.18,
+ "toe_r": 0.012,
+ "anat": {
+  "skull_r": 0.097,
+  "chest_depth_s": 0.165,
+  "belly_depth_s": 0.15,
+  "foot_x_tilt": 0.112,
+  "foot_w": 0.05,
+  "toe_y_tilt": 0.168,
+  "leg_r": [
+   0.07,
+   0.048
+  ],
+  "cap": {
+   "thick": 1.261,
+   "label": "hair"
+  }
+ },
+ "skin": [
+  220,
+  168,
+  140
+ ],
+ "hair": [
+  166,
+  84,
+  51
+ ],
+ "swatch": {
+  "src": "Rigs/races/human/default/body.png",
+  "box": [
+   516,
+   58,
+   676,
+   156
+  ]
+ },
+ "look": "a human man with light warm tan skin, thick wavy curled auburn hair and a broad, heavy build",
+ "dome": "cap of thick wavy auburn hair, parted down the centre into curling locks",
+ "dome_cover": "hair",
+ "skin_words": "warm skin hue, the thick wavy curling locks of its auburn hair, its lighter highlights",
+ "line_words": "heavy, crisp, dark brown contour line",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "face_paint": "the head as a cap of thick wavy curled auburn locks seen from above, parted down the centre, each lock a soft S-shaped wave, its long wavy fringe one unbroken mass of hair hanging down to the same line as on the sculpt, one curl falling over the nose, with, emerging beneath the fringe in the narrow strip along the head's bottom edge, only the nose tip, closed lips and the front of the chin, strongly foreshortened from above and exactly as small as on the sculpt",
+ "torso_paint": "the torso as one broad heavy chest with two pectoral muscles and a flat upper belly below them",
+ "features": {
+  "fringe": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "at": [
+    0,
+    0.62,
+    0.12
+   ],
+   "r": [
+    0.98,
+    0.66,
+    0.55
+   ],
+   "guide": "",
+   "paint": ""
+  },
+  "forelock": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "at": [
+    0,
+    1.08,
+    0.0
+   ],
+   "r": [
+    0.2,
+    0.26,
+    0.3
+   ],
+   "guide": "",
+   "paint": ""
+  }
+ },
+ "pack": "human/default",
+ "head_scale": 1.545,
+ "head_pivot_z": 1.7,
+ "head_back": -0.012,
+ "face_tilt": "the long wavy fringe of the hair, which hangs forward and down as far as the tip of the nose, with one curl falling over the nose, then the tip of the nose peeking out from under the fringe, and just behind the nose the lips and the front of the chin. Fringe, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "swatch_of": "skin and hair",
+ "arms_paint": "broad heavy trapezius, deltoid and shoulder-blade muscles across the shoulder band; thick level arms of biceps, triceps and forearm muscle",
+ "finish": "chalky matte skin with soft low-contrast shading"
+}

@@ -15,6 +15,10 @@ extends Node2D
 #             enclosing helm hides the head and swaps the head box for the bare
 #             patch, an open helm does not, the trunk is drawn again above boots
 #             and below shirts.
+#  6. VARIANTS variant inheritance (core.merge_variant): a re-skin takes its
+#             parent's frames, a new build with its own labels never does (no
+#             leaked leg frames), and every pack resolves to the frame names
+#             core.py resolves it to.
 # Run:  godot --headless --path . res://tests/rig2_parity_test.tscn
 const FIXTURE := "res://tests/fixtures/rig2_parity.json"
 const TOLERANCE := 0.05
@@ -39,6 +43,7 @@ func _ready() -> void:
 	_build()
 	_hands()
 	_body_rules()
+	_variants()
 	# a GDScript runtime error aborts only the function it happens in, so a
 	# crashed section would otherwise pass silently: assert the check count
 	_check("check count", checks >= MIN_CHECKS, "only %d checks ran" % checks)
@@ -226,7 +231,7 @@ func _z(nodes: Array, part: String) -> int:
 
 
 func _hand_poses() -> void:
-	for pack: Array in [["orc", "tilt15_head"], ["human", "default"], ["goblin_male", "default"], ["orc", "ashen"]]:
+	for pack: Array in [["orc", "default"], ["human", "default"], ["goblin_male", "default"], ["orc", "ashen"], ["orc", "legacy"]]:
 		var tag: String = "%s/%s" % [pack[0], pack[1]]
 		var rc: RigCharacter = RigCharacter.new()
 		add_child(rc)
@@ -348,3 +353,41 @@ func _body_rules() -> void:
 				_check("boots and shirt built " + tag, false, "%d boot nodes" % boots.size())
 		rc.queue_free()
 	_check("a pack with a trunk overlay was tested", with_trunk >= 2, "%d" % with_trunk)
+
+
+func _canon(v: Variant) -> String:
+	# JSON numbers come back as floats on both sides; sort keys so order cannot matter
+	return JSON.stringify(v, "", true)
+
+
+func _variants() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIXTURE))
+	var root: Dictionary = parsed
+	var block: Dictionary = root.get("variants", {})
+	var cases: Array = block.get("cases", [])
+	_check("variant fixture", cases.size() >= 4, "%d cases" % cases.size())
+	for c: Dictionary in cases:
+		var base: Dictionary = c["base"]
+		var own: Dictionary = c["own"]
+		var before: String = _canon(base)
+		var merged: Dictionary = RigLibrary.merge_variant(base, own)
+		_check("merge " + str(c["name"]), _canon(merged) == _canon(c["merged"]), _canon(merged))
+		_check("merge leaves the parent alone " + str(c["name"]), _canon(base) == before)
+		if own.has("labels"):
+			var frames: Dictionary = merged["frames"]
+			_check("no leaked frames " + str(c["name"]), not frames.has("leg_l") and not frames.has("leg_r")
+				and not merged.has("parts") and not merged.has("pinned"))
+	var packs: Array = block.get("packs", [])
+	var seen: Dictionary = {}
+	for p: Dictionary in packs:
+		var tag: String = "%s/%s" % [p["race"], p["variant"]]
+		seen[tag] = true
+		var race: Dictionary = RigLibrary.race(str(p["race"]), str(p["variant"]))
+		var frames: Dictionary = race.get("frames", {})
+		var names: Array = frames.keys()
+		names.sort()
+		var want: Array = p["frames"]
+		_check("frame names " + tag, str(names) == str(want), "%s vs %s" % [names, want])
+	for id: String in _race_ids():
+		for v: String in RigLibrary.variants(id):
+			_check("pack in the fixture %s/%s" % [id, v], seen.has("%s/%s" % [id, v]), "re-run export_parity")

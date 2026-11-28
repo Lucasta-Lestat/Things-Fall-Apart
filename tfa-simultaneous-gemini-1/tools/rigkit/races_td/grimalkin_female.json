@@ -1,0 +1,84 @@
+{
+ "base": "grimalkin_base",
+ "pack": "grimalkin_female/default",
+ "delt_r": 0.0908,
+ "trunk_depth_n": 0.1424,
+ "chest_depth_s": 0.1854,
+ "belly_depth_s": 0.1674,
+ "belly_half": 0.183,
+ "pec_half": 0.1178,
+ "upper_arm_r": [
+  0.0736,
+  0.0602
+ ],
+ "forearm_r": [
+  0.0824,
+  0.0549
+ ],
+ "elbow_x": 0.586,
+ "wrist_x": 0.7809,
+ "palm_rx": 0.0789,
+ "palm_ry": 0.0649,
+ "finger_r": 0.0147,
+ "toe_y_tilt": 0.1749,
+ "leg_r": [
+  0.0766,
+  0.051
+ ],
+ "skin": [
+  196,
+  154,
+  102
+ ],
+ "swatch": {
+  "src": "Rigs/races/grimalkin_female/default/body.png",
+  "box": [
+   699,
+   150,
+   783,
+   247
+  ]
+ },
+ "look": "a female grimalkin, a cat-folk with short golden sandy-tan fur, cream-white fur on the chest, belly and paws, a cat head with very large broad ears, and a slim build",
+ "dome": "furred top of the skull",
+ "dome_cover_tilt": "skull",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest in cream-white fur with a flat cream upper belly below it",
+ "face_paint": "the head as a furred top of the skull seen from above with, in the narrow strip along its bottom edge, a natural grimalkin face strongly foreshortened from above, a furred brow with a small cream mark over each narrow shadowed cat eye and a short sandy muzzle with a small pink-brown nose",
+ "features": {
+  "ears_up": {
+   "len": 1.8,
+   "r": [
+    0.66,
+    0.05
+   ],
+   "dir": [
+    0.78,
+    -0.3,
+    0.66
+   ],
+   "root": [
+    0.6,
+    -0.15,
+    0.8
+   ],
+   "guide": "A very large broad pointed ear, like a fennec's, stands on each side of the top of the head, leaning outward.",
+   "paint": "each ear as a broad thin ear, sandy-tan on its back, with a pale pink inner hollow edged by white tufts"
+  },
+  "snout": {
+   "len": 0.38,
+   "r": [
+    0.44,
+    0.32
+   ]
+  },
+  "bust": {
+   "size": 0.7
+  }
+ },
+ "head_scale": 1.84,
+ "head_pivot_z": 1.76,
+ "head_back": -0.02,
+ "hands_paint": "each hand slim and furred with five well-formed fingers ending in small pale claws",
+ "feet_paint": "each paw front with four short cream-furred toes"
+}

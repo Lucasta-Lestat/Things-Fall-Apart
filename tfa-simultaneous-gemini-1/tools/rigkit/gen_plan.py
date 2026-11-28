@@ -6,6 +6,8 @@
     python -m tools.rigkit.gen_plan sheet [--race orc] [--tag final | image.png ...]
     python -m tools.rigkit.gen_plan dome  [--race orc] [--tag final | image.png ...]     (tilt 0 sets only)
     python -m tools.rigkit.gen_plan headsize [--race orc] [--legacy orc/default]
+    python -m tools.rigkit.gen_plan list | prompt --race R | allguides [--fresh] | compare --race R [--variant tilt15]
+    (race specs, their fields and the per-race workflow: tools/rigkit/races_td/README.md)
 
 --tilt is the camera's angle off vertical in degrees, leaning toward the character's FRONT (default
 DEFAULT_TILT = 15, or a race's own "tilt"). 0 is the strict plan view of pilot 3 and still renders
@@ -48,7 +50,7 @@ x = west-east, y = north-south (south = +, the figure faces south = image bottom
 z = height, and the fingertip-to-fingertip half span is 1.0. The image is the per-pixel
 MAX height, so the same pass yields the silhouette and the label map.
 
-A new race is a new RACES entry (proportions, colours, words), not new code.
+A new race is a new spec file in races_td/ (proportions, colours, words, features), not new code.
 Tilted-proxy knobs a race may set (all optional, the orc uses the defaults): foot_x_tilt, foot_w,
 toe_y_tilt, tusk_x_tilt, head_z, head_fwd, jaw, brow, leg_r=(hip, ankle radius), nose_tilt=(extra
 reach, radius factor), ear_tilt=(root radius, tip sweep back, tip rise), face_scale and face_fwd (size
@@ -100,6 +102,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
 
+from . import plan_features
 from .derive import PALETTE, LabelError, derive_frames
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -116,159 +119,97 @@ IOU_MIN_TILT = 0.90                 # a natural repaint of the anatomy outranks 
 
 # part -> derive.PALETTE name. derive's _l/_r are IMAGE left/right.
 PARTS = ["background", "body", "face", "upperarm_l", "upperarm_r", "forearm_l", "forearm_r",
-         "hand_l", "hand_r", "foot_l", "foot_r", "leg_l", "leg_r"]
+         "hand_l", "hand_r", "foot_l", "foot_r", "leg_l", "leg_r", "hair", "over_garment"]
 PART_RGB = [(0, 0, 0)] + [PALETTE[n] for n in PARTS[1:]]
+BASE_PARTS = 13             # the labels every guide has always listed in its JSON; later ones only when used
 
 # ---------------------------------------------------------------- races
-# Proportions in half-span units. "look" is the positive description of the character;
-# "head_extras" says what sits on the skull's rim (only things that jut past the skull).
-RACES = {
-    "orc": dict(
-        shoulder_half=0.30, delt_r=0.105,
-        trunk_depth_n=0.165,            # upper back, north of the shoulder line
-        chest_depth_s=0.212,            # pec shelf, south of the shoulder line
-        belly_depth_s=0.190, belly_half=0.20, pec_half=0.128,
-        skull_r=0.108, skull_y=0.004,   # round dome, centred on the shoulder axis
-        nose=(0.0, 0.0), tusk=0.025, tusk_x=0.052, ear_len=0.062,
-        upper_arm_r=(0.088, 0.072), forearm_r=(0.080, 0.053),
-        elbow_x=0.585, wrist_x=0.805,
-        palm_rx=0.070, palm_ry=0.064, finger_r=0.0145,
-        foot_x=0.128, toe_y=0.238, toe_r=0.023,
-        foot_x_tilt=0.150, foot_w=0.066, toe_y_tilt=0.188, tusk_x_tilt=0.046,   # tilted proxy only
-        # in-game head size of orc/default: `gen_plan headsize --race orc --legacy orc/default`
-        head_scale=1.362, head_back=-0.012, head_pivot_z=1.70,
-        skin=(118, 136, 70), ivory=(236, 226, 196),
-        swatch=dict(src="Rigs/races/orc/default/body.png", box=(630, 20, 810, 170)),
-        look="an orc with olive-green skin, a bald scalp, pointed ears, heavy muscles and ivory tusk tips",
-        head_extras="Two small ivory tusk points touch the outside of the dome's lower rim, set well apart, "
-                    "each one a separate little cone lying on plain smooth chest skin. A pointed ear sticks "
-                    "out sideways from each side of the dome.",
-        skin_words="fresh saturated olive-green hue, its lighter yellow-green highlights",
-        line_words="heavy, crisp, near-black green contour line",
-        # tilted camera (see build_prompt_tilt): what the guide shows, then how to paint it
-        face_tilt="a heavy brow ridge whose overhang shades the eye sockets into two dark slits, right "
-                  "under it the broad tip of the nose, and just behind the nose the front of the jaw with "
-                  "one small ivory tusk rising from each corner of the lower lip. Brow, nose tip and "
-                  "tusks sit close together, squeezed by the steep view, and the tusks and lower lip "
-                  "are the bottom edge of the head, with the chest starting directly below them. A "
-                  "pointed ear sticks out sideways from each side of the head.",
-        torso_tilt="first the top plane of the broad chest with its two pectoral muscles meeting at the "
-                   "breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
-        face_paint="the head as a big bald scalp with, in the narrow strip along its bottom edge, a natural "
-                   "orc face strongly foreshortened from above, a scowling brow over shadowed eye slits, a "
-                   "broad nose tip and the front of a heavy jaw with its two small tusks",
-        torso_paint="the torso as one broad chest with two full pectoral muscles and a firm upper belly "
-                    "below them",
-    ),
-    # human and halfling: tilted guides tuned, never painted. "anat" holds what only the tilted proxy
-    # uses (see tilt_params): for a haired race skull_r is there the HAIR CAP, and face_scale / face_fwd
-    # size and place the face strip under its fringe.
-    "human": dict(
-        shoulder_half=0.25, delt_r=0.08, trunk_depth_n=0.125, chest_depth_s=0.13,
-        belly_depth_s=0.120, belly_half=0.17, pec_half=0.11,
-        skull_r=0.090, skull_y=0.004,
-        nose=(0.011, 0.009), tusk=0.0, tusk_x=0.0, ear_len=0.0,
-        upper_arm_r=(0.062, 0.052), forearm_r=(0.052, 0.036),
-        elbow_x=0.57, wrist_x=0.83,
-        palm_rx=0.055, palm_ry=0.048, finger_r=0.010,
-        foot_x=0.085, toe_y=0.180, toe_r=0.012,
-        anat=dict(skull_r=0.100, face_scale=0.90, face_fwd=0.012, chest_depth_s=0.165, belly_depth_s=0.150,
-                  foot_x_tilt=0.112, foot_w=0.050, toe_y_tilt=0.168, leg_r=(0.070, 0.048)),
-        skin=(214, 160, 120), ivory=(236, 226, 196), hair=(150, 78, 48),
-        swatch=dict(src="Rigs/races/human/default/body.png", box=(715, 50, 845, 178)),
-        look="a human man with light tan skin, short wavy auburn-brown hair and an athletic build",
-        dome="cap of short wavy hair", dome_cover="hair", dome_cover_tilt="hair",
-        head_extras="At the middle of the dome's lower rim a small rounded nose tip pokes out.",
-        skin_words="warm skin hue, its lighter highlights",
-        line_words="heavy, crisp, dark brown contour line",
-        face_tilt="the fringe of the hair, right under it the brow shading the eye sockets into two dark "
-                  "slits, then the bridge and tip of the nose, and just behind the nose the lips and the "
-                  "front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep "
-                  "view, and the chin is the bottom edge of the head, with the chest starting directly "
-                  "below it.",
-        torso_tilt="first the top plane of the chest with its two pectoral muscles meeting at the "
-                   "breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
-        face_paint="the head as a cap of short wavy hair seen from above with, in the narrow strip along "
-                   "its bottom edge, a natural human face strongly foreshortened from above, calm brows "
-                   "over shadowed eyes, a nose tip, closed lips and the front of the chin",
-        torso_paint="the torso as one athletic chest with two pectoral muscles and a flat upper belly "
-                    "below them",
-    ),
-    # Small and slim with a big head: the hair cap is wider than the trunk is deep, so it overhangs the
-    # back, and the round belly juts further south than the chest.
-    "halfling": dict(
-        shoulder_half=0.27, delt_r=0.075, trunk_depth_n=0.115, chest_depth_s=0.170,
-        belly_depth_s=0.215, belly_half=0.20, pec_half=0.115,
-        skull_r=0.185, skull_y=0.006,
-        nose=(0.012, 0.009), tusk=0.0, tusk_x=0.0, ear_len=0.0,
-        upper_arm_r=(0.062, 0.050), forearm_r=(0.050, 0.036),
-        elbow_x=0.56, wrist_x=0.82,
-        palm_rx=0.058, palm_ry=0.052, finger_r=0.011,
-        foot_x=0.105, toe_y=0.228, toe_r=0.020,
-        anat=dict(skull_r=0.140, face_scale=1.05, face_fwd=0.030, head_z=1.76, chest_depth_s=0.150,
-                  belly_depth_s=0.168, foot_x_tilt=0.142, foot_w=0.058, toe_y_tilt=0.176,
-                  leg_r=(0.075, 0.052)),
-        skin=(206, 152, 122), ivory=(236, 226, 196), hair=(150, 108, 62),
-        swatch=dict(src="Rigs/races/halfling_male/default/body.png", box=(170, 150, 300, 260)),
-        look="a halfling man with warm light skin, a soft slim build and a big head of thick wavy "
-             "light-brown hair",
-        dome="cap of thick wavy hair", dome_cover="hair", dome_cover_tilt="hair",
-        head_extras="At the middle of the dome's lower rim a small rounded nose tip touches the rim, lying "
-                    "on plain smooth chest skin.",
-        skin_words="warm peach skin hue, its lighter highlights",
-        line_words="heavy, crisp, dark red-brown contour line",
-        face_tilt="the fringe of the thick hair, right under it the brow shading the eye sockets into two "
-                  "dark slits, then the round tip of the nose, and just behind the nose the lips and the "
-                  "front of a soft round chin. Brow, nose tip and chin sit close together, squeezed by the "
-                  "steep view, and the chin is the bottom edge of the head, with the chest starting "
-                  "directly below it.",
-        torso_tilt="first the top plane of the soft chest, then, below the chest, the top of a small round "
-                   "belly.",
-        face_paint="the head as a big cap of thick wavy hair seen from above with, in the narrow strip "
-                   "along its bottom edge, a natural halfling face strongly foreshortened from above, "
-                   "friendly brows over shadowed eyes, a round nose tip, closed lips and a soft chin",
-        torso_paint="the torso as one soft chest with a small round belly below it",
-    ),
-    # Male goblin: small and wiry with a big bald head, big pointed ears and a long pointed nose.
-    "goblin": dict(
-        shoulder_half=0.25, delt_r=0.064, trunk_depth_n=0.115, chest_depth_s=0.145,
-        belly_depth_s=0.168, belly_half=0.170, pec_half=0.092,
-        skull_r=0.140, skull_y=0.004,
-        nose=(0.0, 0.0), tusk=0.012, tusk_x=0.060, ear_len=0.200,
-        upper_arm_r=(0.052, 0.044), forearm_r=(0.046, 0.034),
-        elbow_x=0.56, wrist_x=0.80,
-        palm_rx=0.066, palm_ry=0.058, finger_r=0.0125,
-        foot_x=0.120, toe_y=0.210, toe_r=0.020,
-        foot_x_tilt=0.122, foot_w=0.056, toe_y_tilt=0.176, tusk_x_tilt=0.058,
-        head_z=1.76, jaw=0.90, nose_tilt=(0.018, 0.74), ear_tilt=(0.046, 0.085, 0.075),
-        leg_r=(0.070, 0.048),
-        skin=(128, 136, 66), ivory=(236, 226, 196),
-        swatch=dict(src="Rigs/races/goblin_male/default/body.png", box=(718, 150, 818, 228)),
-        look="a male goblin with olive-green skin, a big bald head, very large pointed ears, a long pointed "
-             "nose and a small wiry body with thin sinewy arms",
-        head_extras="Two tiny ivory fang points touch the outside of the dome's lower rim, set well apart. "
-                    "A very large pointed ear sticks out sideways from each side of the dome.",
-        skin_words="muted olive-green hue, its lighter yellow-green highlights",
-        line_words="heavy, crisp, near-black green contour line",
-        face_tilt="a bony brow ridge whose overhang shades the eye sockets into two dark slits, right "
-                  "under it a long pointed nose that juts forward to a narrow tip, and just behind the "
-                  "nose the front of a narrow jaw with one tiny ivory fang rising from each corner of the "
-                  "lower lip. Brow, nose and fangs sit close together, squeezed by the steep view, and "
-                  "the nose tip and lower lip are the bottom edge of the head, with the chest starting "
-                  "directly below them. A very large pointed ear, a long leaf shape, sweeps out sideways "
-                  "and a little backward from each side of the head, lying over the shoulder.",
-        torso_tilt="first the top plane of a narrow wiry chest with two small flat pectoral muscles meeting "
-                   "at the breastbone, then, tucked under the chest, a short glimpse of a small round "
-                   "belly.",
-        face_paint="the head as a big bald scalp with, in the narrow strip along its bottom edge, a natural "
-                   "goblin face strongly foreshortened from above, a sly scowling brow over shadowed eye "
-                   "slits, a long pointed nose the same olive-green as the rest of the skin, and a narrow "
-                   "jaw with its two tiny fangs; each big ear a thin leaf of skin with a shallow inner "
-                   "hollow",
-        torso_paint="the torso as one narrow wiry chest with two small flat pectoral muscles and a small "
-                    "round belly below them",
-    ),
-}
+# Every race is a spec file, tools/rigkit/races_td/<name>.json (fields: races_td/README.md). This
+# module holds no per-race data. Proportions are in half-span units; "look" is the positive
+# description of the character. A spec may name a "base" spec: it is loaded first and this one is
+# laid over it ("anat", "features", "colours" and "swatch" merge key by key; a feature set to null
+# is removed), so x_male / x_female share one file of words and differ in a few numbers.
+SPEC_DIR = os.path.join(HERE, "races_td")
+MERGE_KEYS = ("anat", "features", "colours", "swatch")
+
+
+def _merge(base, over):
+    out = dict(base)
+    for k, v in over.items():
+        if k in MERGE_KEYS and isinstance(v, dict) and isinstance(out.get(k), dict):
+            d = dict(out[k])
+            for kk, vv in v.items():
+                if vv is None:
+                    d.pop(kk, None)
+                elif k == "features" and isinstance(vv, dict) and isinstance(d.get(kk), dict):
+                    d[kk] = dict(d[kk], **vv)
+                else:
+                    d[kk] = vv
+            out[k] = d
+        else:
+            out[k] = v
+    return out
+
+
+def load_spec(name, _seen=()):
+    path = os.path.join(SPEC_DIR, name + ".json")
+    if not os.path.exists(path):
+        raise KeyError("no race spec %s" % path)
+    with open(path, encoding="utf-8") as f:
+        spec = json.load(f)
+    base = spec.pop("base", None)
+    if base:
+        if base in _seen:
+            raise ValueError("race spec %s: base loop" % name)
+        own_abstract = spec.get("abstract", False)
+        spec = _merge(load_spec(base, _seen + (name,)), spec)
+        spec["abstract"] = own_abstract         # "abstract" (a base nobody paints) is never inherited
+        if not own_abstract:
+            del spec["abstract"]
+    return spec
+
+
+class _Races(dict):
+    """RACES[name] loads races_td/<name>.json on first use (and resolves its base)."""
+
+    def __missing__(self, name):
+        self[name] = load_spec(name)
+        return self[name]
+
+
+RACES = _Races()
+
+
+def spec_names(paintable=True):
+    """Spec files; with paintable=True only those that are a race to paint (not "abstract" bases)."""
+    out = []
+    for f in sorted(os.listdir(SPEC_DIR)):
+        if f.endswith(".json"):
+            n = f[:-5]
+            if not paintable or not RACES[n].get("abstract"):
+                out.append(n)
+    return out
+
+
+def legacy_pack(race):
+    """(race, variant) of the pack a spec repaints: its "pack", else <name>/default. Once a repaint has
+    been promoted (promote_race) the painting it was made from lives on as <race>/legacy, and that is
+    the pack meant: head size, swatch and comparisons always go back to the legacy painting."""
+    r, v = (RACES[race].get("pack", race + "/default").split("/") + ["default"])[:2]
+    if v == "default" and os.path.exists(os.path.join(ROOT, "Rigs", "races", r, "legacy", "race.json")):
+        v = "legacy"
+    return r, v
+
+
+def legacy_file(rel):
+    """A spec path into a race pack (a swatch source), redirected to the legacy variant once the
+    default has been promoted over."""
+    parts = rel.replace("\\", "/").split("/")
+    if len(parts) >= 5 and parts[:2] == ["Rigs", "races"] and parts[3] == "default":
+        moved = "/".join(parts[:3] + ["legacy"] + parts[4:])
+        if os.path.exists(os.path.join(ROOT, moved)):
+            return moved
+    return rel
 
 
 def tilt_params(p, anat=True):
@@ -356,9 +297,24 @@ def primitives(p, anat=False):
         yh = hy + hf
         ell("body", (0, yh * 0.5, 1.60), (0.085, 0.085, 0.14))                # neck
         head_from = len(P)                      # everything from here to the ears is the head
-        ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))                  # cranium (or the hair cap)
+        hcap = p.get("cap")
+        th = 1.0
+        if hcap:
+            # A cap over the skull: hair, a hat, an oversized cranium. It grows up and BACK from the
+            # skull (its front edge stays at the skull's), so the face strip still shows under it. A
+            # hair-labelled cap is not part of the core figure; the bare skull inside it is.
+            th = hcap.get("thick", 1.25)
+            lab = hcap.get("label", "hair")
+            if lab != "face":                   # the skull under the cap, kept low so it never shows through a thin one
+                ell("face", (0, yh, zh), (r, r * 1.10, 0.135 * 0.78))
+            ell("%s:%s%sskull" % (lab, "c.%s:" % hcap["colour"] if "colour" in hcap else "", "x:" if lab != "face" else ""),
+                (0, yh + hcap.get("fwd", -(th - 1.0) * 1.1) * r, zh + hcap.get("up", (th - 1.0) * 0.5) * r),
+                (r * th * hcap.get("wide", 1.0), r * 1.10 * th * hcap.get("deep", 1.0),
+                 0.135 * (th * hcap.get("tall", 0.8) if lab == "face" else max(th * hcap.get("tall", 0.8), 1.0))))
+        else:
+            ell("face:skull", (0, yh, zh), (r, r * 1.10, 0.135))              # cranium (or the hair cap)
         f = p.get("face_scale", r / 0.108)      # face forms scale with the skull unless a race says otherwise
-        yf = yh + p.get("face_fwd", 0.0)        # a hair cap wider than the skull: the face sits forward in it
+        yf = yh + p.get("face_fwd", 0.10 * r if hcap else 0.0)   # under a cap the face sits a little forward
         bw = p.get("brow", 1.0)
         for s in (-1, 1):                       # brow ridge: two lobes that meet in a notch above the nose
             ell("face", (s * 0.040 * f, yf + 0.076 * f, zh + 0.010), (0.052 * f, 0.040 * f * bw, 0.034))
@@ -376,8 +332,17 @@ def primitives(p, anat=False):
         if el > 0:
             er, eb, eu = p.get("ear_tilt", (0.024, 0.028, 0.005))   # root radius, tip sweep back, tip rise
             for s in (-1, 1):
-                rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035), (s * (r + el), yh - eb, zh + eu),
+                rod("face", (s * r * 0.90, yh + 0.010, zh - 0.035),
+                    (s * (r * (th * hcap.get("wide", 1.0) * 0.92 if hcap else 1.0) + el), yh - eb, zh + eu),
                     er, 0.004, 0.6)
+        for shp in plan_features.expand(p.get("features"), plan_features.HEAD, p):
+            if shp[0] == "ell":                 # head space: origin at the cranium's centre, 1 = skull_r
+                _, part, c, q = shp
+                ell(part, (c[0] * r, yh + c[1] * r, zh + c[2] * r), (q[0] * r, q[1] * r, q[2] * r))
+            else:
+                _, part, a, b, ra, rb, kz = shp
+                rod(part, (a[0] * r, yh + a[1] * r, zh + a[2] * r), (b[0] * r, yh + b[1] * r, zh + b[2] * r),
+                    ra * r, rb * r, kz)
         hs = p.get("head_scale", 1.0)           # see HEAD SIZE CONVENTION in the module docstring
         if hs != 1.0:
             for i in range(head_from, len(P)):
@@ -415,6 +380,17 @@ def primitives(p, anat=False):
                 tx = fx - tr * 3.4 + i * tr * 1.7
                 rad = tr * k * 0.64
                 cap(foot, (s * tx, ty - 0.075), (s * tx, ty - back * tr - rad), rad, rad, 0.05, 0.6)
+        elif not p.get("feet", True):
+            pass                                # a body with no feet (a serpent's coils are a "tail" feature)
+        elif p.get("foot"):
+            lr = p.get("leg_r", (0.085, 0.055))
+            rod("leg_" + side, (s * fx * 0.95, 0.02, 0.90), (s * fx, ty - p.get("foot_len", 0.25) + 0.07, z0 + 0.10),
+                lr[0], lr[1])
+            for shp in plan_features.foot_shapes(p, s, side, fx, ty, z0):
+                if shp[0] == "ell":
+                    ell(*shp[1:])
+                else:
+                    rod(*shp[1:])
         else:
             # ---- legs and feet: a real foot (heel, instep, ball, five touching toes) on the floor
             fw = p.get("foot_w", tr * 2.6)      # half width of the ball of the foot
@@ -440,6 +416,12 @@ def primitives(p, anat=False):
                 tip = ball + (tl + fw * 0.30) * rc - rad
                 rod(foot, (s * (fx + cx * 0.92), ball, z0 + 0.024), (s * (fx + cx * 1.05), tip, z0 + 0.020),
                     rad, rad * 0.95, 0.78)
+    if anat:
+        for shp in plan_features.expand(p.get("features"), plan_features.BODY, p):
+            if shp[0] == "ell":
+                ell(*shp[1:])
+            else:
+                rod(*shp[1:])
     return P
 
 
@@ -460,7 +442,7 @@ def head_scale_for(race, legacy=None, tilt=None):
     install_plan has span-matched the new pack to it. Returns (head_scale, info)."""
     from . import core
     from .install_plan import measures
-    mr, mv = ((legacy or race + "/default").split("/") + ["default"])[:2]
+    mr, mv = (legacy.split("/") + ["default"])[:2] if legacy else legacy_pack(race)
     ref = core.load_race(mr, mv)
     want = ref["frames"]["head"]["lx"] / (measures(ref["frames"])["span"] / 2.0)
 
@@ -485,7 +467,21 @@ def race_tilt(race, tilt=None):
 
 
 def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
-    """Returns (clay, tint, mask, label_idx, stats).
+    """Returns (clay, tint, mask, label_idx, stats); see render_ex."""
+    return render_ex(race, w, h, ss, margin, tilt, over)[:5]
+
+
+def colour_of(p, name):
+    """A feature colour: the spec's "colours"[name], else its hair / skin."""
+    c = p.get("colours", {}).get(name)
+    if c is None:
+        c = p.get("hair", p["skin"]) if name == "hair" else p["skin"]
+    return c
+
+
+def render_ex(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
+    """Returns (clay, tint, mask, label_idx, stats, core): `core` is the mask of the humanoid figure
+    alone (every primitive not tagged ":x"), the part the depth / span gate is measured on.
 
     Orthographic camera `tilt` degrees off vertical, leaning toward the character's front (south):
     a world point (x, y, z) lands at screen (x, y cos t - z sin t), so higher parts move north and
@@ -519,7 +515,17 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
     label = np.zeros((hh, ww), np.uint8)
     tusk = np.zeros((hh, ww), bool)
     skull = np.zeros((hh, ww), bool)
+    core = np.zeros((hh, ww), bool)
+    cidx = np.zeros((hh, ww), np.uint8)         # feature colour, 0 = the base rule (skin / hair cap / ivory)
+    cnames = []
     for name, (cx, cy, cz), (rx, ry, rz) in prims:
+        tags = name.split(":")[1:]
+        ci = 0
+        for tg in tags:
+            if tg.startswith("c."):
+                if tg[2:] not in cnames:
+                    cnames.append(tg[2:])
+                ci = cnames.index(tg[2:]) + 1
         sy0 = cy * ct - cz * st
         ey = float(np.sqrt((ry * ct) ** 2 + (rz * st) ** 2))
         i0 = max(int(np.floor((cx - rx) * scale + ww / 2)) - 1, 0)
@@ -536,6 +542,8 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
         b = oy * dy + oz * dz
         disc = b * b - a * (ox * ox + oy * oy + oz * oz - 1)
         hit = disc > 0
+        if "x" not in tags:
+            core[j0:j1, i0:i1] |= hit
         lam = (-b + np.sqrt(np.clip(disc, 0, None))) / a
         sub = dep[j0:j1, i0:i1]
         win = hit & (lam > sub)
@@ -547,6 +555,7 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
         label[j0:j1, i0:i1][win] = PARTS.index(name.split(":")[0])
         tusk[j0:j1, i0:i1][win] = name.endswith(":tusk")
         skull[j0:j1, i0:i1][win] = name.endswith(":skull")
+        cidx[j0:j1, i0:i1][win] = ci
     mask = dep > -1e8
     X, Y = np.meshgrid(xs, ys)
     r, hy = p["skull_r"], p["skull_y"]
@@ -601,6 +610,8 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
     ivory = np.array(p["ivory"], np.float32) / 205.0
     base = np.where(skull[..., None], np.array(p.get("hair", p["skin"]), np.float32) / 205.0, skin)
     col = np.where(tusk[..., None], ivory * 205 * 0.8 + 0.2 * clay[..., None], base * (clay[..., None] * 1.25))
+    for k, cn in enumerate(cnames, 1):
+        col = np.where((cidx == k)[..., None], (np.array(colour_of(p, cn), np.float32) / 205.0) * (clay[..., None] * 1.25), col)
     tinted = np.where(mask[..., None], np.clip(col, 0, 255), BG).astype(np.uint8)
     tint_im = Image.fromarray(tinted).resize((w, h), Image.LANCZOS)
 
@@ -615,7 +626,7 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
     px = scale / ss
     if anat:
         _, hyw, hzw = head_point(p, (0.0, hy + p.get("head_fwd", 0.03), p.get("head_z", 1.80)))
-        r = r * p.get("head_scale", 1.0)
+        r = r * p.get("head_scale", 1.0) * (p["cap"].get("thick", 1.25) if p.get("cap") else 1.0)
     else:
         hyw, hzw = hy, 0.0
     stats = dict(race=race, canvas=[w, h], tilt_deg=tilt, px_per_unit=round(px, 3),
@@ -625,9 +636,20 @@ def render(race="orc", w=W, h=H, ss=SS, margin=0.035, tilt=None, over=None):
                  skull_centre=[round(w / 2, 2), round(h / 2 + (hyw * ct - hzw * st - yc) * px, 2)],
                  skull_r_px=round(r * px, 2))
     stats["depth_over_span"] = round(stats["depth_px"] / stats["span_px"], 4)
-    stats["label_colours"] = {n: list(c) for n, c in zip(PARTS, PART_RGB)}
+    used = set(int(v) for v in np.unique(lab))
+    stats["label_colours"] = {n: list(c) for i, (n, c) in enumerate(zip(PARTS, PART_RGB)) if i < BASE_PARTS or i in used}
     stats["note"] = "figure faces south (image bottom); _l/_r are IMAGE left/right, as derive.py expects"
-    return clay_im, tint_im, m, lab.astype(np.uint8), stats
+    cm = Image.fromarray((core * 255).astype(np.uint8)).resize((w, h), Image.LANCZOS).point(lambda v: 255 if v >= 128 else 0)
+    cnp = (np.array(cm) > 0) & mnp
+    if anat and ("features" in p or "cap" in p or "depth_band" in p):
+        # the race-aware gate: depth / span of the humanoid figure alone (see core in the docstring)
+        cy_, cx_ = np.nonzero(cnp)
+        stats["core_bbox"] = [int(cx_.min()), int(cy_.min()), int(cx_.max()), int(cy_.max())]
+        stats["core_span_px"] = int(cx_.max() - cx_.min() + 1)
+        stats["core_depth_px"] = int(cy_.max() - cy_.min() + 1)
+        stats["core_depth_over_span"] = round(stats["core_depth_px"] / float(stats["core_span_px"]), 4)
+        stats["depth_band"] = list(p.get("depth_band", DEPTH_BAND_TILT))
+    return clay_im, tint_im, m, lab.astype(np.uint8), stats, Image.fromarray((cnp * 255).astype(np.uint8))
 
 
 def race_out(race):
@@ -639,10 +661,10 @@ def race_out(race):
 def make_swatch(race, out):
     """A tight patch of the current painting's upper arm: colour and line only, no camera cue."""
     sw = RACES[race]["swatch"]
-    im = Image.open(os.path.join(ROOT, sw["src"])).convert("RGBA")
+    im = Image.open(os.path.join(ROOT, legacy_file(sw["src"]))).convert("RGBA")
     bg = Image.new("RGBA", im.size, (BG, BG, BG, 255))
     bg.alpha_composite(im)
-    c = bg.convert("RGB").crop(sw["box"])
+    c = bg.convert("RGB").crop(tuple(sw["box"]))
     c = c.resize((c.width * 3, c.height * 3), Image.LANCZOS)
     p = os.path.join(out, "swatch.png")
     c.save(p)
@@ -653,10 +675,12 @@ def save_guide(race, tilt=None):
     out = race_out(race)
     tilt = race_tilt(race, tilt)
     g = os.path.join(out, guide_prefix(tilt))
-    clay, tint, m, lab, stats = render(race, tilt=tilt)
+    clay, tint, m, lab, stats, core = render_ex(race, tilt=tilt)
     clay.save(g + "_clay.png")
     tint.save(g + "_tint.png")
     m.save(g + "_mask.png")
+    if "core_bbox" in stats:                    # the humanoid figure alone: what the depth gate measures
+        core.save(g + "_core.png")
     lab_rgb = np.array(PART_RGB, np.uint8)[lab]
     Image.fromarray(lab_rgb).save(g + "_labels.png")
     make_swatch(race, out)
@@ -672,14 +696,19 @@ def save_guide(race, tilt=None):
                                              "shoulder_line_y", "skull_centre", "skull_r_px")}))
     print("derive:", "ok, %d frames; %s" % (len(stats["derive"]["frames"]), stats["derive"]["notes"])
           if stats["derive"]["ok"] else "FAIL " + stats["derive"]["error"])
+    if "core_bbox" in stats:
+        lo, hi = stats["depth_band"]
+        v = stats["core_depth_over_span"]
+        print("core depth / span %.4f, band %.2f-%.2f: %s" % (v, lo, hi, "ok" if lo <= v <= hi else "OUTSIDE"))
     return stats
 
 
 # ---------------------------------------------------------------- prompt
 
-def build_prompt(race, guide="tint", swatch=True, tilt=None):
+def build_prompt(race, guide="tint", swatch=True, tilt=None, note=None):
+    """note: one more positive sentence for a single run (`gen --note`); tilted prompts only."""
     if race_tilt(race, tilt) > 0:
-        return build_prompt_tilt(race, guide, swatch, race_tilt(race, tilt))
+        return build_prompt_tilt(race, guide, swatch, race_tilt(race, tilt), note)
     p = RACES[race]
     what = "a flat-colour 3D sculpt" if guide == "tint" else "a grey clay sculpt"
     dome = p.get("dome", "smooth scalp")        # what the top of the head is covered with; last word = its noun
@@ -728,12 +757,33 @@ def build_prompt(race, guide="tint", swatch=True, tilt=None):
 TILT_WORDS = {5: "five", 10: "ten", 15: "fifteen", 20: "twenty", 25: "twenty-five", 30: "thirty"}
 
 
-def build_prompt_tilt(race, guide, swatch, tilt):
+def build_prompt_tilt(race, guide, swatch, tilt, note=None):
     """The tilted camera: the guide's own face, chest and feet are anatomy, so the prompt names each
     one at the size the guide has it and asks for a living creature, positively phrased."""
     p = RACES[race]
     what = "a flat-colour 3D sculpt" if guide == "tint" else "a grey clay sculpt"
     deg = TILT_WORDS.get(int(round(tilt)), "%g" % tilt)
+    feats = p.get("features")
+    head_g = plan_features.sentences(feats, plan_features.HEAD, "guide")
+    body_g = plan_features.sentences(feats, plan_features.BODY, "guide")
+    feat_p = (plan_features.sentences(feats, plan_features.HEAD, "paint")
+              + plan_features.sentences(feats, plan_features.BODY, "paint"))
+    face_tilt = p.get("face_tilt", "the brow, under it the bridge and tip of the nose, and the chin behind them.")
+    if head_g:
+        face_tilt += " " + " ".join(head_g)
+    feet_tilt = p.get("feet_tilt",
+                      "At the very bottom the front halves of the two bare feet stand on the floor far below, toes "
+                      "pointing at the bottom of the picture, each a natural foot front with its instep and five toes "
+                      "side by side, the big toe on the inner side.")
+    if body_g:
+        feet_tilt += " " + " ".join(body_g)
+    arms_paint = p.get("arms_paint", "trapezius, deltoid and shoulder-blade muscles across the shoulder band; level "
+                                     "arms of biceps, triceps and forearm muscle")
+    hands_paint = p.get("hands_paint", "each hand with five well-formed fingers, knuckles and short fingernails")
+    feet_paint = p.get("feet_paint", "each foot front with five natural toes with short dull toenails")
+    torso_paint = p.get("torso_paint", "the torso as one natural chest with a flat upper belly below it")
+    if feat_p:
+        torso_paint += "; " + "; ".join(feat_p)
     t = (
         "Image 1 is %s of a game character, a simple block-out rendered by an orthographic camera high "
         "above the character, looking steeply down at it from just in front of directly overhead, leaning "
@@ -747,46 +797,47 @@ def build_prompt_tilt(race, guide, swatch, tilt):
         "back. The level bars to the left and right are the arms seen from above, ending in flat hands "
         "with the backs of the hands, the knuckles and the spread fingers toward the camera. Below the "
         "shoulder band is the front of the torso seen from steeply above and strongly foreshortened: %s "
-        "At the very bottom the front halves of the two bare feet stand on the floor far below, toes "
-        "pointing at the bottom of the picture, each a natural foot front with its instep and five toes "
-        "side by side, the big toe on the inner side. "
+        "%s "
         "Paint over this exact sculpt to make a finished game character: %s. Keep the identical outline, "
         "pose, proportions, position, scale and steep overhead viewpoint, tracing the silhouette "
         "precisely and keeping every form where and how large the sculpt has it. Turn the sculpt's "
-        "simple forms into the natural anatomy of a believable living creature: %s; trapezius, deltoid "
-        "and shoulder-blade muscles across the shoulder band; level arms of biceps, triceps and forearm "
-        "muscle; each hand with five well-formed fingers, knuckles and short fingernails; %s; and each "
-        "foot front with five natural toes with short dull toenails. Bare unclothed base body, left-right "
-        "symmetric, chalky matte skin, lit softly and evenly from above, on a perfectly flat uniform mid-grey "
+        "simple forms into the natural anatomy of a believable living creature: %s; %s; %s; %s; and %s. "
+        "Bare unclothed base body, %s, %s, lit softly and evenly from above, on a perfectly flat uniform mid-grey "
         "background, RGB 128 128 128, that fills the rest of the picture."
     ) % (what, deg, p.get("dome", "smooth bald scalp"),
-         p.get("face_tilt", "the brow, under it the bridge and tip of the nose, and the chin behind them."),
+         face_tilt,
          p.get("torso_tilt", "first the top plane of the chest, then, tucked under it, a short glimpse of "
                              "the upper belly."),
+         feet_tilt,
          p["look"],
          p.get("face_paint", "the head with, in the strip along its bottom edge, a natural face seen from "
                              "above, brow, nose and chin"),
-         p.get("torso_paint", "the torso as one natural chest with a flat upper belly below it"))
+         arms_paint, hands_paint, torso_paint, feet_paint,
+         p.get("symmetry_words", "left-right symmetric"), p.get("finish", "chalky matte skin"))
+    if p.get("note"):
+        t += " " + p["note"]
+    if note:
+        t += " " + note
     if swatch:
         t += (
-            " Image 2 is a small close-up swatch of this character's painted skin, for colour and finish "
+            " Image 2 is a small close-up swatch of this character's painted %s, for colour and finish "
             "only: match its %s, its smooth cel-like painted matte shading with a few broad, soft-edged, "
             "low-contrast highlights per muscle and one on the %s, mirrored left and right, every highlight a lighter tint of the skin hue, "
             "and its %s, about four pixels thick around the whole silhouette and around the head, crisp "
             "everywhere, with thinner dark lines separating the muscles and the features, across the whole "
             "figure."
-        ) % (p["skin_words"], p.get("dome_cover_tilt", "scalp"), p["line_words"])
+        ) % (p.get("swatch_of", "skin"), p["skin_words"], p.get("dome_cover_tilt", "scalp"), p["line_words"])
     return t
 
 
-def gen(race, n, tag, guide="tint", swatch=True, text=None, tilt=None):
+def gen(race, n, tag, guide="tint", swatch=True, text=None, tilt=None, note=None):
     from .gen_overhead import generate, _part
     out = race_out(race)
     tilt = race_tilt(race, tilt)
     gp = os.path.join(out, guide_prefix(tilt))
     gsrc = "%s_%s.png" % (gp, guide)
     save_guide(race, tilt)                      # always fresh: the proxy is what is being tuned
-    prompt = text or build_prompt(race, guide, swatch, tilt)
+    prompt = text or build_prompt(race, guide, swatch, tilt, note)
     with open(os.path.join(out, "%s.prompt.txt" % tag), "w", encoding="utf-8") as f:
         f.write(prompt)
     # snapshot the inputs: the guide changes between rounds, the candidates must keep theirs
@@ -795,6 +846,8 @@ def gen(race, n, tag, guide="tint", swatch=True, text=None, tilt=None):
     shutil.copyfile(gp + "_mask.png", os.path.join(out, "%s.guide_mask.png" % tag))
     shutil.copyfile(gp + "_labels.png", os.path.join(out, "%s.guide_labels.png" % tag))
     shutil.copyfile(gp + ".json", os.path.join(out, "%s.guide.json" % tag))
+    if os.path.exists(gp + "_core.png"):
+        shutil.copyfile(gp + "_core.png", os.path.join(out, "%s.guide_core.png" % tag))
     inputs = [in1]
     parts = [{"text": prompt}, _part(in1, max_side=1376)]
     if swatch:
@@ -832,8 +885,10 @@ def gen(race, n, tag, guide="tint", swatch=True, text=None, tilt=None):
 
 # ---------------------------------------------------------------- check
 
-def key_mask(a):
-    """Foreground of a painting on flat grey. a: HxWx3 float. Returns (mask, ground colour)."""
+def key_mask(a, gmask=None):
+    """Foreground of a painting on flat grey. a: HxWx3 float. Returns (mask, ground colour).
+    gmask (the guide silhouette): grey paint enclosed by the contour line counts as figure where the
+    guide has figure, so pale grey races (white feathers, silver hair) key as well as coloured ones."""
     k = 24
     corners = np.concatenate([a[:k, :k].reshape(-1, 3), a[:k, -k:].reshape(-1, 3),
                               a[-k:, :k].reshape(-1, 3), a[-k:, -k:].reshape(-1, 3)])
@@ -841,6 +896,8 @@ def key_mask(a):
     d = np.abs(a - bg).max(-1)
     chroma = a.max(-1) - a.min(-1)
     fg = (chroma > 14) | (d > 45)       # coloured skin, or the dark outline / bright tusks
+    if gmask is not None:
+        fg = fg | (ndi.binary_fill_holes(ndi.binary_closing(fg, iterations=1)) & gmask)
     fg = ndi.binary_opening(fg, iterations=1)
     lab, n = ndi.label(fg)
     if n:
@@ -850,10 +907,27 @@ def key_mask(a):
     return fg, bg
 
 
-def measure(path, gmask, write_overlay=True, stats=None, face_lab=None):
+CORE_REACH = 14           # px: painted pixels this near a guide appendage (and off the core) are appendage
+
+
+def core_of(f, gmask, core):
+    """The humanoid part of a painted silhouette `f`: everything except what lies on or beside the
+    guide's non-core forms (tails, wings, back fins, horns, hats, hanging hair)."""
+    excl = ndi.binary_dilation(gmask & ~core, iterations=CORE_REACH) & ~core
+    fc = f & ~excl
+    lab, n = ndi.label(fc)
+    if n > 1:
+        fc = lab == (1 + int(np.argmax(ndi.sum(fc, lab, range(1, n + 1)))))
+    return fc
+
+
+def measure(path, gmask, write_overlay=True, stats=None, face_lab=None, core=None):
+    """core: the guide's core mask (render_ex). With it, depth / span and symmetry are measured on the
+    humanoid part of the painting only; IoU is always over the whole silhouette."""
     a = np.asarray(Image.open(path).convert("RGB").resize((W, H), Image.LANCZOS)).astype(np.float32)
-    f, bg = key_mask(a)
+    f_all, bg = key_mask(a, gmask)
     g = gmask
+    f = core_of(f_all, g, core) if core is not None else f_all
     ys, xs = np.nonzero(f)
     span, depth = xs.max() - xs.min() + 1, ys.max() - ys.min() + 1
     # symmetry about the painting's own centre column: silhouette overlap and colour agreement
@@ -864,6 +938,7 @@ def measure(path, gmask, write_overlay=True, stats=None, face_lab=None):
     both = lf & rf
     sym_shape = float(both.sum()) / max(float((lf | rf).sum()), 1.0)
     sym_colour = 1.0 - float(np.abs(la - ra).mean(-1)[both].mean()) / 255.0
+    f_core, f = f, f_all
     ground = a[~ndi.binary_dilation(f, iterations=6)]
     res = dict(image=os.path.basename(path),
                iou=round(float((g & f).sum()) / float((g | f).sum()), 4),
@@ -876,6 +951,9 @@ def measure(path, gmask, write_overlay=True, stats=None, face_lab=None):
                ground_std=round(float(ground.std(0).max()), 2))
     tilt = float((stats or {}).get("tilt_deg", 0.0))
     lo, hi, iou_min = DEPTH_BAND_TILT + (IOU_MIN_TILT,) if tilt > 0 else DEPTH_BAND_PLAN + (0.93,)
+    if core is not None:
+        lo, hi = (stats or {}).get("depth_band", (lo, hi))
+        res["measured_on"] = "core figure (%d of %d px)" % (int(f_core.sum()), int(f.sum()))
     res["tilt_deg"] = tilt
     res["depth_band"] = [lo, hi]
     res["auto_pass"] = bool(res["iou"] >= iou_min and lo <= res["depth_over_span"] <= hi
@@ -1052,8 +1130,11 @@ def check(race, paths, tag=None):
         gm = snap if os.path.exists(snap) else os.path.join(out, "guide_mask.png")
         gl = pre + ".guide_labels.png" if os.path.exists(pre + ".guide_labels.png") else os.path.join(out, "guide_labels.png")
         gj = pre + ".guide.json" if os.path.exists(pre + ".guide.json") else os.path.join(out, "guide.json")
-        face = (np.asarray(Image.open(gl).convert("RGB")) == np.array(PALETTE["face"], np.uint8)).all(-1)
-        r = measure(p, np.asarray(Image.open(gm).convert("L")) > 0, stats=json.load(open(gj)), face_lab=face)
+        gla = np.asarray(Image.open(gl).convert("RGB"))
+        face = (gla == np.array(PALETTE["face"], np.uint8)).all(-1) | (gla == np.array(PALETTE["hair"], np.uint8)).all(-1)
+        gc = pre + ".guide_core.png"
+        core = np.asarray(Image.open(gc).convert("L")) > 0 if os.path.exists(gc) else None
+        r = measure(p, np.asarray(Image.open(gm).convert("L")) > 0, stats=json.load(open(gj)), face_lab=face, core=core)
         res.append(r)
         print(json.dumps(r))
     name = (tag or _tag_of(paths[0])) + ("_dome" if paths[0].endswith("_dome.png") else "")
@@ -1070,6 +1151,106 @@ def check(race, paths, tag=None):
     return res
 
 
+def all_guides_sheet(races=None, dst=None, cols=4, tile=(688, 300), fresh=False):
+    """Every race's tilted guide on one sheet (default tools/rigkit/out/plan/all_guides_sheet.jpg):
+    the tinted guide cropped to the figure, with the gate numbers. fresh=True renders each first."""
+    races = races or spec_names()
+    dst = dst or os.path.join(OUT, "all_guides_sheet.jpg")
+    rows = -(-len(races) // cols)
+    sheet = Image.new("RGB", (cols * tile[0], rows * tile[1]), (BG, BG, BG))
+    d = ImageDraw.Draw(sheet)
+    for i, race in enumerate(races):
+        g = os.path.join(race_out(race), guide_prefix(race_tilt(race)))
+        if fresh or not os.path.exists(g + "_tint.png"):
+            save_guide(race)
+        st = json.load(open(g + ".json"))
+        im = Image.open(g + "_tint.png").convert("RGB")
+        x0, y0, x1, y1 = st["bbox"]
+        cy = (y0 + y1) // 2
+        hh = int(W * tile[1] / float(tile[0]))
+        top = min(max(cy - hh // 2, 0), H - hh)
+        c = im.crop((0, top, W, top + hh)).resize(tile, Image.LANCZOS)
+        ox, oy = (i % cols) * tile[0], (i // cols) * tile[1]
+        sheet.paste(c, (ox, oy))
+        v = st.get("core_depth_over_span", st["depth_over_span"])
+        lo, hi = st.get("depth_band", DEPTH_BAND_TILT)
+        ok = st["derive"]["ok"] and lo <= v <= hi
+        d.text((ox + 5, oy + 4), "%s   d/s %.3f (whole %.3f) band %.2f-%.3f   derive %s" % (
+            race, v, st["depth_over_span"], lo, hi, "ok" if st["derive"]["ok"] else "FAIL"),
+            fill=(255, 255, 0) if ok else (255, 70, 70))
+    sheet.save(dst, quality=88)
+    print("guides sheet:", dst)
+    return dst
+
+
+COMPARE_OUTFITS = [
+    ("bare", []),
+    ("shirt", ["peasants_stained_shirt"]),
+    ("leather armour + kettle helm", ["leather_armor", "kettle_helm"]),
+    ("great helm", ["great_helm"]),
+    ("robes + hood", ["dark_robes", "dark_hood"]),
+    ("boots", ["leather_boot"]),
+    ("gloves + longsword", ["leather_glove", "longsword"]),
+]
+
+
+def compare(race, variant=None, legacy=None, dst=None, px_per_world=None):
+    """<race>/compare.jpg: the legacy pack against the repainted one at the SAME world scale, bare and
+    in six outfits, with a zoomed head pair on top. Needs the new pack installed (install_plan)."""
+    import cv2
+    from . import core
+    from .install_plan import compare_sheet
+    from .render import compose
+    from .sheet import BG as SHEET_BG
+    lr, lv = (legacy.split("/") + ["default"])[:2] if legacy else legacy_pack(race)
+    nr = RACES[race].get("pack", race + "/default").split("/")[0]
+    if variant is None:                         # a waiting repaint, else the promoted default
+        variant = "tilt15" if os.path.exists(os.path.join(core.race_dir(nr, "tilt15"), "race.json")) else "default"
+    packs = [(lr, lv), (nr, variant)]
+    for r, v in packs:
+        if not os.path.exists(os.path.join(core.race_dir(r, v), "race.json")):
+            raise FileNotFoundError("no pack %s/%s: install the painting first (install_plan)" % (r, v))
+    dst = dst or os.path.join(race_out(race), "compare.jpg")
+    from .install_plan import measures
+    ref = core.load_race(lr, lv)
+    if px_per_world is None:                    # one scale for both columns: the legacy span fills 60 % of a tile
+        px_per_world = min(max(456.0 / (measures(ref["frames"])["span"] * float(ref["world_scale"])), 1.5), 10.0)
+    tmp = os.path.join(race_out(race), "compare.body.tmp.jpg")
+    compare_sheet(packs, tmp, outfits=COMPARE_OUTFITS, px_per_world=px_per_world)
+    body = Image.open(tmp).convert("RGB")
+    body.load()
+    os.remove(tmp)
+    # zoomed heads, same world scale for both (so the head-size rule can be seen)
+    zoom = min(px_per_world * 3.0, 105.0 / (ref["frames"]["head"]["lx"] * float(ref["world_scale"])))
+    side = 190
+    hw = (body.width - side) // 2
+    hh = 330
+    out = Image.new("RGB", (body.width, hh + body.height), (30, 32, 30))
+    d = ImageDraw.Draw(out)
+    d.text((6, 6), "head, x%.1f" % (zoom / px_per_world), fill=(230, 230, 220))
+    skel = core.skeleton()
+    for j, (r, v) in enumerate(packs):
+        img, _, canvas = compose(r, [], v, skel, background=SHEET_BG)
+        k = zoom * float(canvas.data["world_scale"])
+        f = canvas.data["frames"]["head"]
+        o = (np.array(f["o"]) + canvas.pad) * k
+        small = cv2.resize(img[:, :, :3], None, fx=k, fy=k, interpolation=cv2.INTER_AREA if k < 1 else cv2.INTER_CUBIC)
+        t = np.zeros((hh, hw, 3), np.uint8)
+        t[:] = SHEET_BG
+        x0, y0 = int(round(o[0] - hw / 2.0)), int(round(o[1] - hh / 2.0))
+        sx0, sy0 = max(x0, 0), max(y0, 0)
+        sx1, sy1 = min(x0 + hw, small.shape[1]), min(y0 + hh, small.shape[0])
+        if sx1 > sx0 and sy1 > sy0:
+            t[sy0 - y0:sy1 - y0, sx0 - x0:sx1 - x0] = small[sy0:sy1, sx0:sx1]
+        out.paste(Image.fromarray(t), (side + j * hw, 0))
+        d.text((side + j * hw + 6, 6), "%s/%s   head frame radius %.2f world px" % (
+            r, v, f["lx"] * float(canvas.data["world_scale"])), fill=(230, 230, 220))
+    out.paste(body, (0, hh))
+    out.save(dst, quality=90)
+    print("compare sheet:", dst)
+    return dst
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1082,6 +1263,15 @@ def main(argv=None):
     n.add_argument("--tag", default="final"); n.add_argument("--guide", default="tint", choices=["tint", "clay"])
     n.add_argument("--no-swatch", action="store_true"); n.add_argument("--tilt", type=float, default=None, help=th)
     n.add_argument("--text-file", default="", help="use this prompt instead of the built one")
+    n.add_argument("--note", default="", help="one more positive sentence appended to the prompt, this run only")
+    pr = sub.add_parser("prompt", help="print the prompt, no API call"); pr.add_argument("--race", default="orc")
+    pr.add_argument("--note", default=""); pr.add_argument("--tilt", type=float, default=None, help=th)
+    sub.add_parser("list", help="the race specs")
+    ag = sub.add_parser("allguides", help="all_guides_sheet.jpg: every race's tilted guide")
+    ag.add_argument("races", nargs="*"); ag.add_argument("--fresh", action="store_true", help="re-render each guide")
+    cp = sub.add_parser("compare", help="<race>/compare.jpg: legacy pack vs the repainted pack")
+    cp.add_argument("--race", required=True); cp.add_argument("--variant", default=None, help="default: tilt15 while it waits, else default")
+    cp.add_argument("--legacy", default=None, help="pack to compare with (default: the spec's pack)")
     c = sub.add_parser("check")
     c.add_argument("images", nargs="*"); c.add_argument("--race", default="orc"); c.add_argument("--tag", default="")
     d = sub.add_parser("dome")
@@ -1097,7 +1287,18 @@ def main(argv=None):
             ap.error("%s needs --tag or image paths" % a.cmd)
         a.images = sorted(q for q in glob.glob(os.path.join(race_out(a.race), a.tag + "_*.png"))
                           if os.path.basename(q)[len(a.tag) + 1:-4].isdigit())
-    if a.cmd == "headsize":
+    if a.cmd == "list":
+        for nme in spec_names(False):
+            sp = RACES[nme]
+            print("%-22s %s%s" % (nme, "(base only) " if sp.get("abstract") else "repaints %s/%s  " % legacy_pack(nme),
+                                  ", ".join(sp.get("features", {}))))
+    elif a.cmd == "prompt":
+        print(build_prompt(a.race, "tint", True, a.tilt, a.note or None))
+    elif a.cmd == "allguides":
+        all_guides_sheet(a.races or None, fresh=a.fresh)
+    elif a.cmd == "compare":
+        compare(a.race, a.variant, a.legacy)
+    elif a.cmd == "headsize":
         hs, info = head_scale_for(a.race, a.legacy, a.tilt)
         print(json.dumps(info))
         print("first estimate: head_scale=%.3f in RACES[%r]; nudge until in_game_head_now_vs_legacy is 1.00"
@@ -1110,7 +1311,7 @@ def main(argv=None):
         save_guide(a.race, a.tilt)
     elif a.cmd == "gen":
         text = open(a.text_file, encoding="utf-8").read().strip() if a.text_file else None
-        gen(a.race, a.n, a.tag, a.guide, not a.no_swatch, text, a.tilt)
+        gen(a.race, a.n, a.tag, a.guide, not a.no_swatch, text, a.tilt, a.note or None)
     else:
         check(a.race, a.images, a.tag or None)
     return 0

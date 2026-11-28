@@ -1,0 +1,136 @@
+{
+ "base": "gnome_base",
+ "pack": "gnome_male/default",
+ "shoulder_half": 0.3588,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2494,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "elbow_x": 0.5621,
+ "foot_w": 0.0653,
+ "toe_y_tilt": 0.2146,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "skin": [
+  219,
+  167,
+  132
+ ],
+ "cap": {
+  "thick": 1.195,
+  "colour": "hat"
+ },
+ "swatch": {
+  "src": "Rigs/races/gnome_male/default/body.png",
+  "box": [
+   208,
+   238,
+   349,
+   369
+  ]
+ },
+ "look": "a gnome man with fair skin, a tall pointed cap of thick dry red wool felt, a white beard and a small sturdy body",
+ "dome": "tall pointed cap of thick dry red wool felt",
+ "dome_cover_tilt": "beard",
+ "torso_tilt": "first the top plane of a deep barrel chest, then, below the chest, the top of a firm round belly.",
+ "torso_paint": "the torso as one deep barrel chest with a firm round belly below it",
+ "face_paint": "the head as a tall pointed red cap seen from above, its brim resting low over the face, with, in the narrow strip along its bottom edge under the brim, the lower face of an old man strongly foreshortened from above in the same skin as the arms, a white moustache and the white bearded chin",
+ "arms_paint": "thick rounded shoulders across the shoulder band; short strong level arms",
+ "colours": {
+  "hat": [
+   176,
+   44,
+   36
+  ],
+  "beard": [
+   226,
+   226,
+   226
+  ]
+ },
+ "features": {
+  "hat_cone": {
+   "len": 4.5,
+   "lean": 1.2,
+   "paint": "the cap as thick dry wool felt in one flat diffuse red with soft broad brush shading"
+  },
+  "beard": {
+   "colour": "beard",
+   "len": 0.55,
+   "paint": "the beard as soft white hair",
+   "width": 1.0,
+   "at": [
+    0.0,
+    0.95,
+    -1.2
+   ],
+   "depth": 0.5
+  },
+  "side_hair": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "beard",
+   "at": [
+    0.98,
+    0.45,
+    -0.55
+   ],
+   "r": [
+    0.3,
+    0.42,
+    0.32
+   ],
+   "mirror": true,
+   "guide": "A tuft of white hair shows on each side of the head under the brim of the cap, joining the beard.",
+   "paint": "the side tufts as soft white hair"
+  },
+  "moustache": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "beard",
+   "at": [
+    0.3,
+    1.2,
+    -0.86
+   ],
+   "r": [
+    0.36,
+    0.2,
+    0.17
+   ],
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  }
+ },
+ "head_scale": 1.665,
+ "depth_band": [
+  0.22,
+  0.312
+ ],
+ "notes": [
+  "depth band widened to 0.312: with the legacy head size the humanoid figure is 0.300 deep (the head, not the camera, sets the depth)",
+  "INSTALLED pack is still r1_4 (rejected by the judge: glossy cap, pink nose, ears, brows, head +6.9 %). Its labels.png carries a hand fix (cap contour rim trunk -> hair); re-running install_plan on any candidate undoes that and it must be reapplied.",
+  "Corrective pass 2026-11-28: spec retuned (no brow, smaller nose, moustache blobs over the nose, shorter raised beard so the belly shows, narrower side tufts, matte felt wording, swatch highlight sentence moved off the cap). NOT yet painted: Gemini returned HTTP 402 (credits depleted) on all 5 calls of tag r3.",
+  "Paint with: python tools/rigkit/out/plan/gnome_male/gen_flat_cap.py <tag> 4  (gen_plan.gen with the cap shading flattened in the tinted guide; the plain Lambert cone reads as gloss). After install check the head frame against 9.16 world px; lower head_scale toward 1.60 if painted tufts inflate it."
+ ],
+ "brow": 0.35,
+ "face_fwd": -0.012,
+ "head_back": -0.015,
+ "finish": "chalky matte skin, dry matte wool felt",
+ "face_tilt": "the brim of the cap, right under the brim the tip of the nose, a white moustache lying over the lower half of the nose, and the bearded chin. They sit close together, squeezed by the steep view, and the beard is the bottom edge of the head, with the chest starting directly below it.",
+ "nose_tilt": [
+  0.0,
+  0.82
+ ]
+}

@@ -37,6 +37,31 @@ static func has_race(race: String, variant: String = "default") -> bool:
 	return FileAccess.file_exists(race_dir(race, variant) + "/race.json")
 
 
+## Keys a pack measures from its OWN label map (mirror of core.DERIVED_KEYS).
+const DERIVED_KEYS: Array[String] = ["frames", "parts", "overlays", "notes", "size", "pinned", "auto_pinned"]
+
+
+## A variant's data over its parent's (mirror of core.merge_variant). A re-skin (no
+## "labels" of its own) takes every missing key and frame from the parent. A new
+## build (own "labels") inherits identity and scale only: the DERIVED_KEYS are its
+## own or absent, so a child whose camera hides the legs has no leg frames.
+static func merge_variant(base: Dictionary, own: Dictionary) -> Dictionary:
+	var merged: Dictionary = base.duplicate(true)
+	var own_frames: Dictionary = own.get("frames", {})
+	var frames: Dictionary = {}
+	if own.has("labels"):
+		for k: String in DERIVED_KEYS:
+			merged.erase(k)
+	else:
+		var base_frames: Dictionary = merged.get("frames", {})
+		frames = base_frames
+	for k: String in own.keys():
+		merged[k] = own[k]
+	frames.merge(own_frames.duplicate(true), true)
+	merged["frames"] = frames
+	return merged
+
+
 ## A race pack. A variant holding only art inherits everything else from the
 ## variant named in "inherits"; "_dirs" lists the folders to look for files in.
 static func race(race_id: String, variant: String = "default") -> Dictionary:
@@ -54,13 +79,7 @@ static func race(race_id: String, variant: String = "default") -> Dictionary:
 		if base.is_empty():
 			push_warning("RigLibrary: %s inherits a missing variant" % key)
 			return {}
-		var merged: Dictionary = base.duplicate(true)
-		var base_frames: Dictionary = merged.get("frames", {})
-		var own_frames: Dictionary = data.get("frames", {})
-		for k: String in data.keys():
-			merged[k] = data[k]
-		base_frames.merge(own_frames, true)
-		merged["frames"] = base_frames
+		var merged: Dictionary = merge_variant(base, data)
 		var base_dirs: Array = base["_dirs"]
 		for d: String in base_dirs:
 			dirs.append(d)

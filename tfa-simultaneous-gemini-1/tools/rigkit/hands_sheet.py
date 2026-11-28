@@ -1,6 +1,6 @@
 """The hand rig's review sheet: every hand case on a few races, arm view and zoom.
 
-    python -m tools.rigkit.hands_sheet [--races orc/tilt15_head,human,goblin_male]
+    python -m tools.rigkit.hands_sheet [--races orc,human,goblin_male]
                                        [--before DIR] [--out tools/rigkit/out/hands]
 
 Each row is one case (weapon held, bare, gloved, gloved and holding). With --before
@@ -24,7 +24,7 @@ from .render import compose
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", "hands")
 BG = (86, 92, 84)
-RACES = [("orc", "tilt15_head"), ("human", "default"), ("goblin_male", "default")]
+RACES = [("orc", "default"), ("human", "default"), ("goblin_male", "default")]
 CASES = [
     ("longsword", "longsword held", ["longsword"], None),
     ("dagger", "dagger held", ["dagger"], None),

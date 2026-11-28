@@ -1,0 +1,25 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "dome_cover_tilt": "hair",
+ "skin_words": "chalk-pale skin, its lighter highlights",
+ "line_words": "crisp, dark grey-brown contour line",
+ "face_tilt": "the fringe of the hair, right under it the brow shading the eye sockets into two dark slits, then the bridge and tip of the nose, and just behind the nose the lips and the front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it."
+}

@@ -1,0 +1,657 @@
+{
+ "base": "goluna_base",
+ "pack": "goluna_female/default",
+ "shoulder_half": 0.2604,
+ "delt_r": 0.078,
+ "trunk_depth_n": 0.1539,
+ "chest_depth_s": 0.199,
+ "belly_depth_s": 0.1789,
+ "belly_half": 0.1916,
+ "pec_half": 0.123,
+ "upper_arm_r": [
+  0.074,
+  0.068
+ ],
+ "elbow_x": 0.5311,
+ "wrist_x": 0.79,
+ "palm_rx": 0.088,
+ "palm_ry": 0.08,
+ "finger_r": 0.023,
+ "foot_x_tilt": 0.1295,
+ "foot_w": 0.0516,
+ "toe_y_tilt": 0.1834,
+ "leg_r": [
+  0.0809,
+  0.053
+ ],
+ "skin": [
+  184,
+  188,
+  184
+ ],
+ "head_z": 1.76,
+ "swatch": {
+  "src": "Rigs/races/goluna_female/default/body.png",
+  "box": [
+   770,
+   122,
+   950,
+   222
+  ]
+ },
+ "look": "a female goluna, a hawk-like bird-folk woman of slender soft feminine build, covered all over in soft downy pale grey-white plumage of small overlapping feather marks, with a crested head of layered pointed feathers, a short hooked cool mid-grey beak, feathered arms, feathered hands ending in short dark slate-grey claws, and dark slate-grey bird feet",
+ "torso_tilt": "first the top plane of the feathered chest with a soft rounded bust, then, tucked under it, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as a soft downy feathered chest with a gentle rounded feminine bust, a soft curved line under it, and a downy upper belly below",
+ "features": {
+  "beak": {
+   "len": 0.62,
+   "r": [
+    0.44,
+    0.06
+   ]
+  },
+  "ruff": null,
+  "plume": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0,
+    -0.15,
+    0.05
+   ],
+   "b": [
+    0,
+    -1.3,
+    0.0
+   ],
+   "r": [
+    0.96,
+    0.34
+   ],
+   "kz": 0.5,
+   "mirror": false,
+   "guide": "The whole head is a teardrop of layered pointed feathers: rows of overlapping leaf-shaped feathers cover its top, every feather tip pointing to the top of the picture, the tips along both sides stand out as a serrated edge, and they rise to one pointed crest feather at the top edge of the head. A few pointed tufts of cheek feathers stand out on each side of the face.",
+   "paint": "the head feathers as rows of overlapping pointed feathers with a serrated outline rising to the pointed crest"
+  },
+  "crest_tip": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0,
+    -1.05,
+    0.05
+   ],
+   "b": [
+    0,
+    -1.78,
+    0.0
+   ],
+   "r": [
+    0.36,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": false,
+   "guide": "",
+   "paint": ""
+  },
+  "flank0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.739,
+    0.42,
+    0.0
+   ],
+   "b": [
+    1.141,
+    -0.026,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "flank1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.795,
+    0.12,
+    0.0
+   ],
+   "b": [
+    1.152,
+    -0.337,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "flank2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.755,
+    -0.18,
+    0.0
+   ],
+   "b": [
+    1.068,
+    -0.644,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "flank3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.626,
+    -0.48,
+    0.0
+   ],
+   "b": [
+    0.896,
+    -0.948,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "flank4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.496,
+    -0.78,
+    0.0
+   ],
+   "b": [
+    0.724,
+    -1.247,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "flank5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.38,
+    -1.05,
+    0.0
+   ],
+   "b": [
+    0.567,
+    -1.514,
+    0.0
+   ],
+   "r": [
+    0.3,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "cheek0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.78,
+    0.35,
+    -0.15
+   ],
+   "b": [
+    1.118,
+    0.227,
+    -0.2
+   ],
+   "r": [
+    0.24,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "cheek1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.78,
+    0.62,
+    -0.15
+   ],
+   "b": [
+    1.12,
+    0.608,
+    -0.2
+   ],
+   "r": [
+    0.24,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "cheek2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.78,
+    0.86,
+    -0.15
+   ],
+   "b": [
+    1.046,
+    0.947,
+    -0.2
+   ],
+   "r": [
+    0.24,
+    0.04
+   ],
+   "kz": 0.5,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.0,
+    0.55,
+    0.963
+   ],
+   "b": [
+    0.0,
+    0.03,
+    1.25
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": false,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.45,
+    0.55,
+    0.805
+   ],
+   "b": [
+    0.468,
+    0.03,
+    1.104
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.24,
+    0.15,
+    1.081
+   ],
+   "b": [
+    0.25,
+    -0.37,
+    1.135
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.68,
+    0.15,
+    0.781
+   ],
+   "b": [
+    0.707,
+    -0.37,
+    0.777
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.0,
+    -0.25,
+    1.097
+   ],
+   "b": [
+    0.0,
+    -0.77,
+    0.893
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": false,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.45,
+    -0.25,
+    0.96
+   ],
+   "b": [
+    0.468,
+    -0.77,
+    0.674
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf6": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.22,
+    -0.65,
+    0.85
+   ],
+   "b": [
+    0.229,
+    -1.17,
+    0.22
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf7": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.5,
+    -0.65,
+    0.671
+   ],
+   "b": [
+    0.52,
+    -1.17,
+    0.05
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "leaf8": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "skin",
+   "core": false,
+   "a": [
+    0.0,
+    -1.0,
+    0.401
+   ],
+   "b": [
+    0.0,
+    -1.52,
+    0.161
+   ],
+   "r": [
+    0.25,
+    0.05
+   ],
+   "kz": 0.4,
+   "mirror": false,
+   "guide": "",
+   "paint": ""
+  },
+  "eye": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "eye",
+   "core": true,
+   "a": [
+    0.62,
+    0.93,
+    0.12
+   ],
+   "b": [
+    0.32,
+    1.07,
+    -0.06
+   ],
+   "r": [
+    0.07,
+    0.075
+   ],
+   "kz": 0.8,
+   "mirror": true,
+   "guide": "",
+   "paint": ""
+  },
+  "bust": {
+   "size": 1.5
+  },
+  "arm_fins": {
+   "at": 0.25,
+   "size": 0.06,
+   "guide": "A fringe of longer feathers stands out from the back edge of each forearm.",
+   "paint": "each forearm fringe as a row of soft pointed flight feathers"
+  },
+  "fringe_a": {
+   "kind": "arm_fins",
+   "at": 0.05,
+   "size": 0.052,
+   "guide": "",
+   "paint": ""
+  },
+  "fringe_b": {
+   "kind": "arm_fins",
+   "at": 0.45,
+   "size": 0.05,
+   "guide": "",
+   "paint": ""
+  },
+  "fringe_c": {
+   "kind": "arm_fins",
+   "at": 0.65,
+   "size": 0.04,
+   "guide": "",
+   "paint": ""
+  },
+  "fringe_d": {
+   "kind": "arm_fins",
+   "at": 0.85,
+   "size": 0.03,
+   "guide": "",
+   "paint": ""
+  }
+ },
+ "head_scale": 1.57,
+ "depth_band": [
+  0.22,
+  0.324
+ ],
+ "notes": [
+  "depth band widened to 0.324: with the legacy head size the humanoid figure is 0.312 deep (the head, not the camera, sets the depth)"
+ ],
+ "hands_paint": "each hand as a feathered hand ending in short dark claws, four fingers and a thumb",
+ "feet_paint": "each foot front as a dark slate-grey bird foot with three short thick rounded toes",
+ "foot": {
+  "kind": "claw",
+  "toes": 3,
+  "toe_len": 1.0,
+  "spread": 0.28,
+  "claw": 0.0
+ },
+ "arms_paint": "the shoulder band and the level, slender, soft arms covered in soft downy plumage of small overlapping feather marks",
+ "note": "Soft downy plumage covers the whole body in small overlapping feather marks.",
+ "colours": {
+  "beak": [
+   136,
+   142,
+   146
+  ],
+  "eye": [
+   44,
+   50,
+   58
+  ]
+ },
+ "forearm_r": [
+  0.082,
+  0.058
+ ],
+ "dome": "feathered top of the head, covered in rows of overlapping pointed feathers",
+ "face_tilt": "heavy pale brow feathers over two narrow dark eyes and between them a short hooked beak that points down and forward. Brow, eyes and beak sit close together, squeezed by the steep view, and the tip of the beak is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a crested top of the head seen from above, all layered pointed feathers, and, in the narrow strip along its bottom edge, a natural goluna face strongly foreshortened from above: heavy pale brow feathers, two narrow dark glaring eyes half hidden under them, and a short hooked cool mid-grey beak",
+ "finish": "flat matte gouache with low-contrast shading",
+ "skin_words": "pale grey-white feathers, its small scalloped feather marks"
+}

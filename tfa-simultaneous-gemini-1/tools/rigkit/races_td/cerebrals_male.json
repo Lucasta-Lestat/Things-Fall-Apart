@@ -1,0 +1,70 @@
+{
+ "base": "cerebrals_base",
+ "pack": "cerebrals_male/default",
+ "shoulder_half": 0.2,
+ "delt_r": 0.052,
+ "trunk_depth_n": 0.1029,
+ "chest_depth_s": 0.1391,
+ "belly_depth_s": 0.1279,
+ "belly_half": 0.1535,
+ "pec_half": 0.1001,
+ "upper_arm_r": [
+  0.0495,
+  0.0405
+ ],
+ "forearm_r": [
+  0.0499,
+  0.0333
+ ],
+ "elbow_x": 0.53,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.0509,
+ "finger_r": 0.0115,
+ "foot_x_tilt": 0.1,
+ "foot_w": 0.0402,
+ "toe_y_tilt": 0.1462,
+ "leg_r": [
+  0.0617,
+  0.0442
+ ],
+ "skin": [
+  183,
+  146,
+  181
+ ],
+ "cap": {
+  "thick": 1.755,
+  "label": "face",
+  "tall": 0.85
+ },
+ "swatch": {
+  "src": "Rigs/races/cerebrals_male/default/body.png",
+  "box": [
+   653,
+   196,
+   735,
+   261
+  ]
+ },
+ "look": "a male cerebral, a slight alien humanoid with smooth pink-lilac skin, a very large bald domed cranium, large solid dark almond eyes and very thin limbs",
+ "features": {},
+ "head_scale": 1.253,
+ "depth_band": [
+  0.22,
+  0.379
+ ],
+ "notes": [
+  "depth band widened to 0.379: with the legacy head size the humanoid figure is 0.367 deep (the head, not the camera, sets the depth)",
+  "shoulder_half 0.27 -> 0.20, delt_r 0.066 -> 0.052 after set r1: the drafted trunk came out 35 % wider than the legacy pack's torso frame (garments floated); nose_tilt/face_scale give the brow lobes room for the large eyes",
+  "corrective pass r3: judge found r2 glossy (hard-edged scalp/forearm highlights), paler than legacy, light eye corners. look/skin_words/finish/face_paint steer to a velvety matte, pink-lilac, solid-eyed figure; r3 was painted from r3.prompt.txt (gen --text-file), which also replaces the shared 'cel-like ... highlights' swatch sentence, the source of the hard highlights"
+ ],
+ "nose_tilt": [
+  0.0,
+  0.6
+ ],
+ "face_scale": 1.15,
+ "skin_words": "even pink-lilac skin tone",
+ "finish": "velvety matte skin with gentle, smoothly blended, low-contrast painterly shading under soft diffuse overcast light",
+ "face_paint": "the head as a very large smooth bald cranium seen from above with, in the narrow strip along its bottom edge, a natural cerebral face strongly foreshortened from above, two large solid dark almond eyes, each evenly dark from corner to corner with one tiny glint, a tiny nose and a small narrow chin"
+}

@@ -1,0 +1,75 @@
+{
+ "base": "aedelf_base",
+ "pack": "aedelf_female/default",
+ "shoulder_half": 0.3014,
+ "delt_r": 0.0828,
+ "trunk_depth_n": 0.1295,
+ "chest_depth_s": 0.1702,
+ "belly_depth_s": 0.1545,
+ "belly_half": 0.1733,
+ "pec_half": 0.112,
+ "upper_arm_r": [
+  0.0653,
+  0.0534
+ ],
+ "forearm_r": [
+  0.0635,
+  0.0423
+ ],
+ "elbow_x": 0.5851,
+ "wrist_x": 0.7952,
+ "palm_rx": 0.0737,
+ "palm_ry": 0.0522,
+ "finger_r": 0.0118,
+ "foot_x_tilt": 0.1355,
+ "foot_w": 0.0403,
+ "toe_y_tilt": 0.1655,
+ "leg_r": [
+  0.0717,
+  0.0488
+ ],
+ "skin": [
+  85,
+  61,
+  111
+ ],
+ "cap": {
+  "thick": 1.341,
+  "label": "hair"
+ },
+ "hair": [
+  212,
+  203,
+  226
+ ],
+ "swatch": {
+  "src": "Rigs/races/aedelf_female/default/body.png",
+  "box": [
+   726,
+   194,
+   866,
+   264
+  ]
+ },
+ "look": "an aedelf woman, a dark elf with deep violet skin, long flowing silver-white hair parted in the middle, long pointed ears and a slender build",
+ "dome": "cap of long silver-white hair parted in the middle",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a cap of long silver-white hair parted in the middle seen from above with, in the narrow strip along its bottom edge, a natural dark elf face strongly foreshortened from above, calm brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_long": {
+   "width": 2.5,
+   "depth": 1.0
+  },
+  "locks": {},
+  "bust": {
+   "size": 0.6
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.201 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.34"
+ ],
+ "head_scale": 1.33,
+ "note": "The hair is thick, soft and wavy, painted matte in loose painterly strands, bright silver-white with pale lilac shadows, and the whole hair mass is closed all the way round by the same crisp near-black violet contour line as the body."
+}

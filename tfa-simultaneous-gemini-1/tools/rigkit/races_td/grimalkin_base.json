@@ -1,0 +1,46 @@
+{
+ "abstract": true,
+ "shoulder_half": 0.36,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.1431,
+ "foot_w": 0.075,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "head_z": 1.76,
+ "tusk_x_tilt": 0.046,
+ "foot": {
+  "kind": "paw",
+  "toes": 4
+ },
+ "skin_words": "sandy-tan fur, its lighter highlights",
+ "line_words": "crisp, dark brown contour line",
+ "face_tilt": "a furred brow over two shadowed eyes, a short cat muzzle with a small nose and whisker pads, and the chin behind it. Brow, muzzle and chin sit close together, squeezed by the steep view, and the muzzle is the bottom edge of the head, with the chest starting directly below it.",
+ "arms_paint": "the shoulder band and the level arms covered in short fur that follows the muscles beneath",
+ "feet_tilt": "At the very bottom the front halves of the two paws stand on the floor far below, toes pointing at the bottom of the picture, each a rounded paw front with four short round toes side by side.",
+ "feet_paint": "each paw front with four short furred toes",
+ "swatch_of": "fur",
+ "finish": "matte short fur",
+ "features": {
+  "snout": {
+   "len": 0.45,
+   "r": [
+    0.5,
+    0.36
+   ]
+  }
+ }
+}

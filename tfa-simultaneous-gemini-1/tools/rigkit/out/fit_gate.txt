@@ -1,155 +1,117 @@
 item                          ok  WARN  FAIL   n/a   worst
-adventurer_pack               55     0     0     0   
-breastplate                   42    12     1     0   human_undead_male: art distorted x3.13
-breastplate_td                30    21     4     0   human: covers only 47%
-chain_shirt                   49     5     1     0   human_undead_male: covers 77%; art distorted x3.08
-dagger                        55     0     0     0   
-dark_hood                     55     0     0     0   
-dark_robes                    40    14     1     0   human_undead_male: covers 83%; art distorted x3.08
-golden_helm                   55     0     0     0   
-great_helm                    55     0     0     0   
-kettle_helm                   55     0     0     0   
-leather_armor                 49     4     2     0   human: covers only 66%
-leather_boot                  96    14     0     0   aedelf_female/l: art stretched x0.53
-leather_boot_td              108     2     0     0   elf/l: art stretched x0.59
-leather_glove                220     0     0     0   
-legionnaires_armor            39    15     1     0   human_undead_male: art distorted x3.08
-longsword                     55     0     0     0   
-nobles_blouse                 51     3     1     0   human_undead_male: covers 82%; art distorted x3.08
-padded_vest                   51     3     1     0   human_undead_male: covers 82%; art distorted x3.08
-peasants_stained_shirt        51     3     1     0   human_undead_male: covers 84%; art distorted x3.08
-plate_gauntlet               220     0     0     0   
-plate_sabaton                  3    67    40     0   aedelf_female/l: art distorted x0.31
-plate_sabaton_td             108     2     0     0   elf/l: art stretched x0.59
-red_cape                      55     0     0     0   
-spear                         37    18     0     0   aedelf_female/r: 61% of the handle is inside the hand
-TOTAL  FAIL=53  WARN=183  ok=1634
-  WARN aedelf_female        leather_boot             l art stretched x0.53
-  FAIL aedelf_female        plate_sabaton            l art distorted x0.31
-  FAIL aedelf_female        plate_sabaton            r art distorted x0.39
+adventurer_pack               87     0     0     0   
+breastplate                   80     6     1     0   human_undead_male: art distorted x3.08
+chain_shirt                   79     7     1     0   human_undead_male: covers 77%; art distorted x3.08
+dagger                        87     0     0     0   
+dark_hood                     87     0     0     0   
+dark_robes                    62    24     1     0   human_undead_male: covers 83%; art distorted x3.08
+golden_helm                   87     0     0     0   
+great_helm                    87     0     0     0   
+kettle_helm                   87     0     0     0   
+leather_armor                 73    12     2     0   human: covers only 66%
+leather_boot                 172     2     0     0   elf/l: art stretched x0.59
+leather_glove                348     0     0     0   
+legionnaires_armor            58    27     2     0   goblin_female: 22% floats off the body
+longsword                     87     0     0     0   
+nobles_blouse                 83     3     1     0   human_undead_male: covers 82%; art distorted x3.08
+padded_vest                   80     6     1     0   human_undead_male: covers 82%; art distorted x3.08
+peasants_stained_shirt        82     4     1     0   human_undead_male: covers 84%; art distorted x3.08
+plate_gauntlet               348     0     0     0   
+plate_sabaton                172     2     0     0   elf/l: art stretched x0.59
+red_cape                      87     0     0     0   
+spear                         51    36     0     0   aedelf_female/r: 67% of the handle is inside the hand
+TOTAL  FAIL=10  WARN=129  ok=2384
+  WARN aedelf_female        spear                    r 67% of the handle is inside the hand
   WARN aedelf_female        spear                    r 61% of the handle is inside the hand
-  WARN aedelf_male          leather_boot             l art stretched x0.59
-  WARN aedelf_male          leather_boot             r art stretched x0.49
-  FAIL aedelf_male          plate_sabaton            l art distorted x0.35
-  FAIL aedelf_male          plate_sabaton            r art distorted x0.29
   WARN aedelf_male          spear                    r handle 7.1 wide, fist 6.1
-  WARN cerebrals_female     breastplate_td            covers 70%
-  WARN cerebrals_female     plate_sabaton            l art stretched x0.47
-  WARN cerebrals_female     plate_sabaton            r art stretched x0.46
+  WARN aedelf_male          spear                    r handle 7.1 wide, fist 6.1
+  WARN cerebrals_female     legionnaires_armor        10% off the body
+  WARN cerebrals_female     spear                    r 72% of the handle is inside the hand
   WARN cerebrals_female     spear                    r 68% of the handle is inside the hand
-  WARN cerebrals_male       breastplate               13% off the body
   WARN cerebrals_male       dark_robes                10% off the body
   WARN cerebrals_male       legionnaires_armor        12% off the body
-  WARN dhampir_female       breastplate_td            covers 81%
-  FAIL dhampir_female       plate_sabaton            l art distorted x0.38
-  WARN dhampir_female       plate_sabaton            r art stretched x0.47
+  WARN dhampir_female       breastplate               12% off the body
+  WARN dhampir_female       chain_shirt               10% off the body
+  WARN dhampir_female       dark_robes                19% off the body
+  WARN dhampir_female       leather_armor             16% off the body
+  WARN dhampir_female       legionnaires_armor        19% off the body
+  WARN dhampir_female       padded_vest               11% off the body
+  WARN dhampir_female       spear                    r handle 7.1 wide, fist 6.3
   WARN dhampir_female       spear                    r handle 7.1 wide, fist 6.6
-  WARN dhampir_male         breastplate_td            covers 85%
-  WARN dhampir_male         plate_sabaton            l art stretched x0.49
-  WARN dhampir_male         plate_sabaton            r art stretched x0.51
-  WARN draconian_female     plate_sabaton            l art stretched x0.41
-  FAIL draconian_female     plate_sabaton            r art distorted x0.36
-  FAIL draconian_male       plate_sabaton            l art distorted x0.40
-  FAIL draconian_male       plate_sabaton            r art distorted x0.36
-  WARN dwarf_female         breastplate_td            covers 81%
-  WARN dwarf_female         plate_sabaton            l art stretched x0.44
-  WARN dwarf_female         plate_sabaton            r art stretched x0.43
-  WARN dwarf_male           breastplate_td            covers 77%
-  WARN dwarf_male           plate_sabaton            l art stretched x0.45
-  WARN dwarf_male           plate_sabaton            r art stretched x0.45
-  WARN elf                  leather_boot             l art stretched x0.42
-  WARN elf                  leather_boot             r art stretched x0.42
-  WARN elf                  leather_boot_td          l art stretched x0.59
-  WARN elf                  leather_boot_td          r art stretched x0.59
-  FAIL elf                  plate_sabaton            l art distorted x0.25
-  FAIL elf                  plate_sabaton            r art distorted x0.25
-  WARN elf                  plate_sabaton_td         l art stretched x0.59
-  WARN elf                  plate_sabaton_td         r art stretched x0.59
+  WARN dhampir_male         dark_robes                15% off the body
+  WARN dhampir_male         leather_armor             10% off the body
+  WARN dhampir_male         legionnaires_armor        15% off the body
+  WARN draconian_female     dark_robes                12% off the body
+  WARN draconian_female     leather_armor             10% off the body
+  WARN draconian_female     legionnaires_armor        10% off the body
+  WARN dwarf_male           dark_robes                16% off the body
+  WARN dwarf_male           leather_armor             11% off the body
+  WARN dwarf_male           legionnaires_armor        15% off the body
+  WARN elf                  leather_boot             l art stretched x0.59
+  WARN elf                  leather_boot             r art stretched x0.59
+  WARN elf                  plate_sabaton            l art stretched x0.59
+  WARN elf                  plate_sabaton            r art stretched x0.59
   WARN elf                  spear                    r 74% of the handle is inside the hand
-  WARN gnome_female         breastplate               covers 80%
-  WARN gnome_female         plate_sabaton            l art stretched x0.43
-  WARN gnome_female         plate_sabaton            r art stretched x0.45
+  WARN elf                  spear                    r handle 7.1 wide, fist 6.4
   WARN gnome_female         spear                    r handle 7.1 wide, fist 7.1
-  WARN gnome_male           plate_sabaton            l art stretched x0.49
-  WARN gnome_male           plate_sabaton            r art stretched x0.49
+  WARN gnome_female         spear                    r handle 7.1 wide, fist 6.3
   WARN gnome_male           spear                    r handle 7.1 wide, fist 7.4
-  WARN goatmen_female       breastplate_td            covers 80%
-  FAIL goatmen_female       plate_sabaton            l art distorted x0.38
-  FAIL goatmen_female       plate_sabaton            r art distorted x0.39
+  WARN gnome_male           spear                    r handle 7.1 wide, fist 6.9
   WARN goatmen_female       spear                    r handle 7.1 wide, fist 7.5
-  WARN goatmen_male         breastplate               covers 85%
+  WARN goatmen_female       spear                    r handle 7.1 wide, fist 7.5
   WARN goatmen_male         dark_robes                11% off the body
   WARN goatmen_male         legionnaires_armor        12% off the body
-  FAIL goatmen_male         plate_sabaton            l art distorted x0.39
-  FAIL goatmen_male         plate_sabaton            r art distorted x0.37
-  WARN goblin_female        breastplate               13% off the body
   WARN goblin_female        legionnaires_armor        12% off the body
-  WARN goblin_female        plate_sabaton            l art stretched x0.44
-  WARN goblin_female        plate_sabaton            r art stretched x0.44
   WARN goblin_female        spear                    r handle 7.1 wide, fist 7.3
-  WARN goblin_male          breastplate               10% off the body
+  WARN goblin_female        breastplate               16% off the body
+  WARN goblin_female        chain_shirt               11% off the body
+  WARN goblin_female        dark_robes                20% off the body
+  WARN goblin_female        leather_armor             16% off the body
+  FAIL goblin_female        legionnaires_armor        22% floats off the body
+  WARN goblin_female        padded_vest               13% off the body
+  WARN goblin_female        peasants_stained_shirt    11% off the body
+  WARN goblin_female        spear                    r handle 7.1 wide, fist 4.9
+  WARN goblin_male          spear                    r 70% of the handle is inside the hand
   WARN goblin_male          legionnaires_armor        10% off the body
-  WARN goblin_male          plate_sabaton            l art stretched x0.45
-  WARN goblin_male          plate_sabaton            r art stretched x0.47
   WARN goblin_male          spear                    r handle 7.1 wide, fist 6.8
-  WARN goluna_female        breastplate_td            covers 79%
-  WARN goluna_female        plate_sabaton            l art stretched x0.42
-  WARN goluna_female        plate_sabaton            r art stretched x0.46
-  WARN goluna_male          breastplate_td            covers 79%
   WARN goluna_male          chain_shirt               covers 85%
   WARN goluna_male          leather_armor             covers 85%
-  WARN goluna_male          leather_boot             l art stretched x0.45
-  WARN goluna_male          leather_boot             r art stretched x0.43
-  FAIL goluna_male          plate_sabaton            l art distorted x0.26
-  FAIL goluna_male          plate_sabaton            r art distorted x0.26
   WARN goluna_male          spear                    r 65% of the handle is inside the hand
+  WARN goluna_male          spear                    r 72% of the handle is inside the hand
   WARN grimalkin_female     legionnaires_armor        10% off the body
-  WARN grimalkin_female     plate_sabaton            l art stretched x0.43
-  WARN grimalkin_female     plate_sabaton            r art stretched x0.41
-  WARN grimalkin_male       plate_sabaton            l art stretched x0.43
-  WARN grimalkin_male       plate_sabaton            r art stretched x0.44
-  WARN half_elf_female      breastplate               covers 81%
   WARN half_elf_female      dark_robes                10% off the body
   WARN half_elf_female      legionnaires_armor        12% off the body
-  WARN half_elf_female      plate_sabaton            r art stretched x0.59
-  FAIL half_elf_male        plate_sabaton            l art distorted x0.39
-  FAIL half_elf_male        plate_sabaton            r art distorted x0.40
-  WARN half_orc_female      breastplate               covers 83%
-  WARN half_orc_female      leather_boot             l art stretched x0.54
-  WARN half_orc_female      leather_boot             r art stretched x0.55
-  FAIL half_orc_female      plate_sabaton            l art distorted x0.32
-  FAIL half_orc_female      plate_sabaton            r art distorted x0.33
-  WARN half_orc_male        breastplate_td            covers 82%
-  WARN half_orc_male        plate_sabaton            l art stretched x0.42
-  WARN half_orc_male        plate_sabaton            r art stretched x0.46
-  WARN halfling_female      plate_sabaton            l art stretched x0.47
-  WARN halfling_female      plate_sabaton            r art stretched x0.42
-  WARN halfling_male        plate_sabaton            l art stretched x0.45
-  WARN halfling_male        plate_sabaton            r art stretched x0.47
+  WARN half_elf_female      legionnaires_armor        12% off the body
+  WARN half_elf_female      spear                    r handle 7.1 wide, fist 7.2
+  WARN half_orc_female      breastplate               10% off the body
+  WARN half_orc_female      dark_robes                18% off the body
+  WARN half_orc_female      leather_armor             14% off the body
+  WARN half_orc_female      legionnaires_armor        18% off the body
+  WARN half_orc_female      padded_vest               11% off the body
+  WARN halfling_female      dark_robes                12% off the body
+  WARN halfling_female      legionnaires_armor        13% off the body
+  WARN halfling_female      spear                    r handle 7.1 wide, fist 7.4
   WARN halfling_male        spear                    r handle 7.1 wide, fist 7.4
-  WARN high_elf_female      leather_boot             l art stretched x0.47
-  WARN high_elf_female      leather_boot             r art stretched x0.45
-  FAIL high_elf_female      plate_sabaton            l art distorted x0.28
-  FAIL high_elf_female      plate_sabaton            r art distorted x0.27
+  WARN halfling_male        dark_robes                16% off the body
+  WARN halfling_male        leather_armor             12% off the body
+  WARN halfling_male        legionnaires_armor        16% off the body
+  WARN halfling_male        spear                    r handle 7.1 wide, fist 6.8
+  WARN high_elf_female      spear                    r handle 7.1 wide, fist 5.1
   WARN high_elf_female      spear                    r handle 7.1 wide, fist 6.1
-  WARN human                breastplate               covers 83%
-  FAIL human                breastplate_td            covers only 47%
+  WARN human                breastplate               covers 74%
   WARN human                chain_shirt               covers 72%
   WARN human                dark_robes                covers 83%
   FAIL human                leather_armor             covers only 66%
   WARN human                nobles_blouse             covers 75%
   WARN human                padded_vest               covers 78%
   WARN human                peasants_stained_shirt    covers 78%
-  WARN human                plate_sabaton            l art stretched x0.41
-  WARN human                plate_sabaton            r art stretched x0.41
-  WARN human_female         breastplate_td            covers 84%
-  WARN human_female         plate_sabaton            l art stretched x0.47
-  WARN human_female         plate_sabaton            r art stretched x0.47
+  WARN human_female         legionnaires_armor        11% off the body
+  WARN human_female         spear                    r handle 7.1 wide, fist 6.8
   WARN human_female         spear                    r handle 7.1 wide, fist 7.1
-  WARN human_undead_female  plate_sabaton            l art stretched x0.44
-  WARN human_undead_female  plate_sabaton            r art stretched x0.45
-  FAIL human_undead_male    breastplate               art distorted x3.13
-  FAIL human_undead_male    breastplate_td            covers only 69%; art distorted x3.08
+  WARN human_undead_female  dark_robes                10% off the body
+  WARN human_undead_female  legionnaires_armor        13% off the body
+  WARN human_undead_female  spear                    r handle 7.1 wide, fist 7.8
+  FAIL human_undead_male    breastplate               art distorted x3.08
   FAIL human_undead_male    chain_shirt               covers 77%; art distorted x3.08
   FAIL human_undead_male    dark_robes                covers 83%; art distorted x3.08
   FAIL human_undead_male    leather_armor             covers 76%; art distorted x3.08
@@ -157,78 +119,36 @@ TOTAL  FAIL=53  WARN=183  ok=1634
   FAIL human_undead_male    nobles_blouse             covers 82%; art distorted x3.08
   FAIL human_undead_male    padded_vest               covers 82%; art distorted x3.08
   FAIL human_undead_male    peasants_stained_shirt    covers 84%; art distorted x3.08
-  FAIL human_undead_male    plate_sabaton            l art distorted x0.37
-  WARN human_undead_male    plate_sabaton            r art stretched x0.46
-  WARN kobold_female        breastplate               10% off the body
+  WARN human_undead_male    breastplate               10% off the body
+  WARN human_undead_male    dark_robes                17% off the body
+  WARN human_undead_male    leather_armor             10% off the body
+  WARN human_undead_male    legionnaires_armor        18% off the body
   WARN kobold_female        dark_robes                10% off the body
   WARN kobold_female        legionnaires_armor        11% off the body
-  WARN kobold_female        plate_sabaton            l art stretched x0.42
-  WARN kobold_female        plate_sabaton            r art stretched x0.44
-  WARN kobold_male          breastplate               10% off the body
+  WARN kobold_female        spear                    r handle 7.1 wide, fist 7.5
   WARN kobold_male          dark_robes                10% off the body
   WARN kobold_male          legionnaires_armor        10% off the body
-  WARN kobold_male          plate_sabaton            l art stretched x0.47
-  WARN kobold_male          plate_sabaton            r art stretched x0.49
   WARN kobold_male          spear                    r handle 7.1 wide, fist 7.7
-  FAIL mephistkin_female    breastplate_td            covers only 67%
   WARN mephistkin_female    dark_robes                covers 80%
-  WARN mephistkin_female    plate_sabaton            l art stretched x0.45
-  WARN mephistkin_female    plate_sabaton            r art stretched x0.42
-  WARN mephistkin_male      breastplate_td            covers 77%
-  FAIL mephistkin_male      plate_sabaton            l art distorted x0.37
-  FAIL mephistkin_male      plate_sabaton            r art distorted x0.37
-  WARN naga_female          breastplate_td            covers 84%
-  FAIL naga_female          plate_sabaton            l art distorted x0.37
-  FAIL naga_female          plate_sabaton            r art distorted x0.37
-  WARN naga_male            breastplate               covers 78%
   WARN naga_male            dark_robes                11% off the body
-  FAIL naga_male            plate_sabaton            l art distorted x0.37
-  FAIL naga_male            plate_sabaton            r art distorted x0.38
   WARN naga_male            spear                    r 56% of the handle is inside the hand
-  WARN newt_female          breastplate_td            covers 85%
-  WARN newt_female          leather_boot             r art stretched x0.57
-  FAIL newt_female          plate_sabaton            l art distorted x0.36
-  FAIL newt_female          plate_sabaton            r art distorted x0.34
   WARN newt_female          spear                    r handle 7.1 wide, fist 7.2
-  WARN newt_male            breastplate_td            covers 78%
   WARN newt_male            dark_robes                12% off the body
   WARN newt_male            legionnaires_armor        13% off the body
-  FAIL newt_male            plate_sabaton            l art distorted x0.39
-  FAIL newt_male            plate_sabaton            r art distorted x0.39
-  WARN orc                  breastplate_td            covers 83%
-  WARN orc                  dark_robes                11% off the body
-  WARN orc                  legionnaires_armor        10% off the body
-  WARN orc                  plate_sabaton            l art stretched x0.48
-  WARN orc                  plate_sabaton            r art stretched x0.49
-  WARN orc                  breastplate_td            covers 83%
-  WARN orc                  dark_robes                11% off the body
-  WARN orc                  legionnaires_armor        10% off the body
-  WARN orc                  plate_sabaton            l art stretched x0.48
-  WARN orc                  plate_sabaton            r art stretched x0.49
-  WARN orc                  plate_sabaton            l art stretched x0.42
-  WARN orc                  plate_sabaton            r art stretched x0.41
   WARN orc                  dark_robes                12% off the body
   WARN orc                  legionnaires_armor        11% off the body
-  WARN orc                  plate_sabaton            l art stretched x0.42
-  WARN orc                  plate_sabaton            r art stretched x0.42
-  WARN orc_female           plate_sabaton            l art stretched x0.41
-  WARN orc_female           plate_sabaton            r art stretched x0.44
-  WARN quadrelf_female      breastplate               11% off the body
+  WARN orc                  dark_robes                12% off the body
+  WARN orc                  legionnaires_armor        11% off the body
+  WARN orc                  dark_robes                11% off the body
+  WARN orc                  legionnaires_armor        10% off the body
   WARN quadrelf_female      legionnaires_armor        11% off the body
-  WARN quadrelf_female      plate_sabaton            l art stretched x0.43
-  WARN quadrelf_female      plate_sabaton            r art stretched x0.44
-  FAIL quadrelf_male        plate_sabaton            l art distorted x0.36
-  FAIL quadrelf_male        plate_sabaton            r art distorted x0.37
-  WARN sahuagin_female      breastplate_td            covers 75%
   WARN sahuagin_female      chain_shirt               covers 81%
   WARN sahuagin_female      dark_robes                covers 85%
   WARN sahuagin_female      leather_armor             covers 82%
   WARN sahuagin_female      nobles_blouse             covers 83%
   WARN sahuagin_female      padded_vest               covers 85%
   WARN sahuagin_female      peasants_stained_shirt    covers 85%
-  WARN sahuagin_female      plate_sabaton            l art stretched x0.46
-  WARN sahuagin_female      plate_sabaton            r art stretched x0.41
-  FAIL sahuagin_male        breastplate_td            covers only 66%
+  WARN sahuagin_male        breastplate               covers 85%
   WARN sahuagin_male        chain_shirt               covers 73%
   WARN sahuagin_male        dark_robes                covers 78%
   WARN sahuagin_male        leather_armor             covers 72%
@@ -236,27 +156,7 @@ TOTAL  FAIL=53  WARN=183  ok=1634
   WARN sahuagin_male        nobles_blouse             covers 77%
   WARN sahuagin_male        padded_vest               covers 78%
   WARN sahuagin_male        peasants_stained_shirt    covers 79%
-  WARN sahuagin_male        plate_sabaton            l art stretched x0.45
-  WARN sahuagin_male        plate_sabaton            r art stretched x0.44
-  WARN saurian_female       breastplate_td            covers 84%
-  WARN saurian_female       leather_boot             l art stretched x0.58
-  FAIL saurian_female       plate_sabaton            l art distorted x0.35
-  FAIL saurian_female       plate_sabaton            r art distorted x0.37
-  WARN saurian_male         breastplate_td            covers 77%
   WARN saurian_male         chain_shirt               covers 84%
   WARN saurian_male         leather_armor             covers 84%
   WARN saurian_male         legionnaires_armor        covers 85%
-  WARN saurian_male         plate_sabaton            l art stretched x0.45
-  WARN saurian_male         plate_sabaton            r art stretched x0.45
-  WARN sobruaro_female      breastplate_td            covers 84%
-  WARN sobruaro_female      plate_sabaton            l art stretched x0.46
-  WARN sobruaro_female      plate_sabaton            r art stretched x0.45
-  WARN sobruaro_male        breastplate_td            covers 83%
-  WARN sobruaro_male        leather_boot             l art stretched x0.54
-  FAIL sobruaro_male        plate_sabaton            l art distorted x0.32
-  FAIL sobruaro_male        plate_sabaton            r art distorted x0.36
-  WARN vampire_female       plate_sabaton            l art stretched x0.50
-  WARN vampire_female       plate_sabaton            r art stretched x0.55
   WARN vampire_female       spear                    r handle 7.1 wide, fist 6.8
-  WARN vampire_male         plate_sabaton            l art stretched x0.43
-  FAIL vampire_male         plate_sabaton            r art distorted x0.38

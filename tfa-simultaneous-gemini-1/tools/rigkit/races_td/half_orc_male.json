@@ -1,0 +1,55 @@
+{
+ "base": "half_orc_base",
+ "pack": "half_orc_male/default",
+ "shoulder_half": 0.3596,
+ "delt_r": 0.115,
+ "trunk_depth_n": 0.1812,
+ "chest_depth_s": 0.231,
+ "belly_depth_s": 0.2062,
+ "belly_half": 0.2119,
+ "pec_half": 0.1352,
+ "upper_arm_r": [
+  0.0983,
+  0.0804
+ ],
+ "forearm_r": [
+  0.0883,
+  0.0589
+ ],
+ "elbow_x": 0.5641,
+ "wrist_x": 0.7876,
+ "palm_rx": 0.0765,
+ "palm_ry": 0.063,
+ "finger_r": 0.0142,
+ "foot_x_tilt": 0.1419,
+ "foot_w": 0.0551,
+ "toe_y_tilt": 0.2032,
+ "leg_r": [
+  0.0912,
+  0.0578
+ ],
+ "skin": [
+  105,
+  111,
+  55
+ ],
+ "swatch": {
+  "src": "Rigs/races/half_orc_male/default/body.png",
+  "box": [
+   205,
+   40,
+   355,
+   184
+  ]
+ },
+ "look": "a half-orc man with dark olive-green skin, a bald scalp, pointed ears, two small lower tusks and a heavy muscular build",
+ "dome": "smooth bald scalp",
+ "dome_cover_tilt": "scalp",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "face_paint": "the head as a smooth bald scalp seen from above with, in the narrow strip along its bottom edge, a natural half-orc face strongly foreshortened from above, a scowling brow over shadowed eye slits, a broad nose tip and the front of a heavy jaw with its two small tusks",
+ "features": {},
+ "head_scale": 1.279,
+ "head_pivot_z": 1.7,
+ "head_back": -0.012
+}

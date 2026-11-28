@@ -1082,11 +1082,11 @@ def promote(item, new_id=None):
 # ---------------------------------------------------------------- compare
 
 PILOT = ["peasants_stained_shirt", "breastplate", "great_helm"]
-RACES = [("orc", "tilt15"), ("orc", "tilt15_head"), ("orc", "default"), ("human", "default"), ("goblin_male", "default"),
+RACES = [("orc", "default"), ("orc", "legacy"), ("human", "default"), ("goblin_male", "default"), ("goblin_male", "legacy"),
          ("halfling_male", "default")]
-SHEET_RACES = [("orc", "tilt15"), ("orc", "tilt15_head"), ("human", "default"), ("halfling_male", "default"), ("orc", "default"),
+SHEET_RACES = [("orc", "default"), ("human", "default"), ("halfling_male", "default"), ("orc", "legacy"),
                ("goblin_male", "default")]
-ITEM_SHEET_RACES = [("orc", "tilt15_head"), ("orc", "default"), ("human", "default"), ("halfling_male", "default"),
+ITEM_SHEET_RACES = [("orc", "default"), ("orc", "legacy"), ("human", "default"), ("halfling_male", "default"),
                     ("goblin_male", "default")]
 
 

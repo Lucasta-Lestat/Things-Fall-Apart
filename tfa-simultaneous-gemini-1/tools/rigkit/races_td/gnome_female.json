@@ -1,0 +1,457 @@
+{
+ "base": "gnome_base",
+ "pack": "gnome_female/default",
+ "shoulder_half": 0.345,
+ "delt_r": 0.08,
+ "trunk_depth_n": 0.157,
+ "chest_depth_s": 0.2026,
+ "belly_depth_s": 0.2206,
+ "belly_half": 0.205,
+ "pec_half": 1e-06,
+ "upper_arm_r": [
+  0.072,
+  0.062
+ ],
+ "forearm_r": [
+  0.062,
+  0.05
+ ],
+ "elbow_x": 0.5653,
+ "foot_w": 0.0662,
+ "toe_y_tilt": 0.1968,
+ "leg_r": [
+  0.0821,
+  0.0536
+ ],
+ "skin": [
+  223,
+  199,
+  165
+ ],
+ "brow": 0.35,
+ "face_scale": 0.9,
+ "cap": {
+  "thick": 2.63,
+  "colour": "cap",
+  "tall": 0.5,
+  "wide": 1.2,
+  "deep": 0.92,
+  "fwd": -1.42,
+  "up": 0.55
+ },
+ "swatch": {
+  "src": "Rigs/races/gnome_female/default/body.png",
+  "box": [
+   209,
+   242,
+   343,
+   347
+  ]
+ },
+ "look": "a plump soft-bodied mushroom gnome woman with pale cream skin, smooth rounded limbs, a soft full bust, a round belly and, in place of hair, a wide warm orange-red toadstool cap with white spots",
+ "dome": "wide bell-shaped warm orange-red toadstool cap, with a soft low peak, a flared rim and about twenty white spots of mixed sizes scattered over it",
+ "dome_cover_tilt": "toadstool cap",
+ "face_tilt": "the lower face peeping from beneath the cap's front rim: the small tip of the nose and, below it, a small rounded chin, with the chest starting directly below the chin.",
+ "face_paint": "the head as a wide bell-shaped warm orange-red toadstool cap seen from above, keeping every white spot of the sculpt where and how large it is, with, beneath its front rim, a small soft nose tip and a small rounded chin in the cap's shadow",
+ "torso_tilt": "first two soft round breasts seen from above, hanging low side by side, each with a curved lower edge, then, below them, the top of a smooth round belly.",
+ "torso_paint": "the torso as a woman's soft chest with two full round breasts, each closed below by one soft curved line, over a smooth plump round belly with a small navel",
+ "arms_paint": "soft smooth rounded shoulders across the shoulder band; short soft smooth level arms",
+ "symmetry_words": "the body left-right symmetric",
+ "colours": {
+  "cap": [
+   190,
+   68,
+   48
+  ],
+  "spot": [
+   240,
+   232,
+   226
+  ]
+ },
+ "features": {
+  "bust": null,
+  "cap_peak": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "cap",
+   "core": false,
+   "a": [
+    0,
+    -1.42,
+    0.75
+   ],
+   "b": [
+    0,
+    -1.55,
+    2.9
+   ],
+   "r": [
+    2.5,
+    0.85
+   ],
+   "kz": 0.8
+  },
+  "breasts": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "colour": "skin",
+   "core": true,
+   "mirror": true,
+   "at": [
+    0.118,
+    0.128,
+    1.275
+   ],
+   "r": [
+    0.108,
+    0.088,
+    0.12
+   ]
+  },
+  "spot00": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -2.383,
+    -0.887,
+    1.576
+   ],
+   "r": [
+    0.3,
+    0.3,
+    0.135
+   ]
+  },
+  "spot01": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    0.767,
+    -0.566,
+    2.769
+   ],
+   "r": [
+    0.13,
+    0.13,
+    0.059
+   ]
+  },
+  "spot02": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    0.453,
+    -1.386,
+    3.46
+   ],
+   "r": [
+    0.16,
+    0.16,
+    0.072
+   ]
+  },
+  "spot03": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -1.235,
+    -3.209,
+    1.738
+   ],
+   "r": [
+    0.13,
+    0.13,
+    0.059
+   ]
+  },
+  "spot04": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -1.091,
+    -0.605,
+    2.572
+   ],
+   "r": [
+    0.24,
+    0.24,
+    0.108
+   ]
+  },
+  "spot05": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    1.168,
+    -2.491,
+    2.408
+   ],
+   "r": [
+    0.3,
+    0.3,
+    0.135
+   ]
+  },
+  "spot06": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -0.927,
+    0.901,
+    1.193
+   ],
+   "r": [
+    0.24,
+    0.24,
+    0.108
+   ]
+  },
+  "spot07": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    0.341,
+    0.372,
+    2.121
+   ],
+   "r": [
+    0.4,
+    0.4,
+    0.18
+   ]
+  },
+  "spot08": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -1.264,
+    -1.649,
+    2.697
+   ],
+   "r": [
+    0.36,
+    0.36,
+    0.162
+   ]
+  },
+  "spot09": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -0.021,
+    -2.862,
+    2.588
+   ],
+   "r": [
+    0.24,
+    0.24,
+    0.108
+   ]
+  },
+  "spot10": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -0.088,
+    -0.485,
+    2.947
+   ],
+   "r": [
+    0.2,
+    0.2,
+    0.09
+   ]
+  },
+  "spot11": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    2.674,
+    -0.843,
+    1.347
+   ],
+   "r": [
+    0.24,
+    0.24,
+    0.108
+   ]
+  },
+  "spot12": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    2.07,
+    0.232,
+    1.256
+   ],
+   "r": [
+    0.4,
+    0.4,
+    0.18
+   ]
+  },
+  "spot13": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    2.618,
+    -1.882,
+    1.422
+   ],
+   "r": [
+    0.3,
+    0.3,
+    0.135
+   ]
+  },
+  "spot14": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -2.436,
+    0.03,
+    1.089
+   ],
+   "r": [
+    0.13,
+    0.13,
+    0.059
+   ]
+  },
+  "spot15": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -0.746,
+    0.125,
+    2.224
+   ],
+   "r": [
+    0.16,
+    0.16,
+    0.072
+   ]
+  },
+  "spot16": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -2.019,
+    -2.707,
+    1.532
+   ],
+   "r": [
+    0.2,
+    0.2,
+    0.09
+   ]
+  },
+  "spot17": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    1.671,
+    -0.813,
+    2.173
+   ],
+   "r": [
+    0.2,
+    0.2,
+    0.09
+   ]
+  },
+  "spot18": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    1.029,
+    0.927,
+    1.111
+   ],
+   "r": [
+    0.2,
+    0.2,
+    0.09
+   ]
+  },
+  "spot19": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "spot",
+   "core": false,
+   "at": [
+    -1.687,
+    0.573,
+    1.194
+   ],
+   "r": [
+    0.13,
+    0.13,
+    0.059
+   ]
+  }
+ },
+ "head_scale": 1.22,
+ "note": "The toadstool cap is dry and velvety matte like felt, the same size and shape as the sculpt's cap, and only her small soft chin and nose tip show beneath the cap rim. Her skin is smooth and soft all over, with gentle rounded forms."
+}

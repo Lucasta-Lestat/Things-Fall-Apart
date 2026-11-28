@@ -1,0 +1,128 @@
+{
+ "base": "saurian_base",
+ "pack": "saurian_female/default",
+ "shoulder_half": 0.3058,
+ "elbow_x": 0.5524,
+ "wrist_x": 0.7751,
+ "palm_rx": 0.081,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x_tilt": 0.1565,
+ "foot_w": 0.0745,
+ "skin": [
+  115,
+  94,
+  47
+ ],
+ "swatch": {
+  "src": "Rigs/races/saurian_female/default/body.png",
+  "box": [
+   667,
+   119,
+   763,
+   248
+  ]
+ },
+ "look": "a female saurian, a crocodile-like lizard-folk with olive yellow-green scales, a long crocodile snout, a webbed fan crest behind the head and a heavy muscular build",
+ "skin_words": "olive yellow-green scales, its lighter highlights",
+ "features": {
+  "fan_web": {
+   "kind": "blob",
+   "at": [
+    0,
+    -0.75,
+    0.92
+   ],
+   "r": [
+    1.45,
+    0.95,
+    0.1
+   ],
+   "core": false,
+   "guide": "Behind the skull a webbed fan crest sweeps back over the nape: a thin membrane stretched between seven spines that radiate from the back of the head, the middle spine longest.",
+   "paint": "the fan crest as a thin olive membrane with soft folds stretched between seven bony spines, its rim scalloped between the spine tips"
+  },
+  "fan_mid": {
+   "kind": "rod",
+   "a": [
+    0,
+    -0.45,
+    0.85
+   ],
+   "b": [
+    0,
+    -1.95,
+    1.5
+   ],
+   "r": [
+    0.12,
+    0.04
+   ],
+   "core": false
+  },
+  "fan_1": {
+   "kind": "rod",
+   "a": [
+    0.28,
+    -0.45,
+    0.8
+   ],
+   "b": [
+    0.62,
+    -1.78,
+    1.4
+   ],
+   "r": [
+    0.12,
+    0.04
+   ],
+   "core": false,
+   "mirror": true
+  },
+  "fan_2": {
+   "kind": "rod",
+   "a": [
+    0.5,
+    -0.4,
+    0.7
+   ],
+   "b": [
+    1.12,
+    -1.45,
+    1.2
+   ],
+   "r": [
+    0.12,
+    0.04
+   ],
+   "core": false,
+   "mirror": true
+  },
+  "fan_3": {
+   "kind": "rod",
+   "a": [
+    0.7,
+    -0.3,
+    0.55
+   ],
+   "b": [
+    1.52,
+    -0.85,
+    0.95
+   ],
+   "r": [
+    0.12,
+    0.04
+   ],
+   "core": false,
+   "mirror": true
+  }
+ },
+ "head_scale": 1.135,
+ "foot": {
+  "kind": "claw",
+  "toes": 4
+ },
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four long toes ending in short dark claws"
+}

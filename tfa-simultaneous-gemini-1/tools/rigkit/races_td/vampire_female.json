@@ -1,0 +1,88 @@
+{
+ "base": "vampire_base",
+ "pack": "vampire_female/default",
+ "shoulder_half": 0.3423,
+ "delt_r": 0.084,
+ "trunk_depth_n": 0.1314,
+ "chest_depth_s": 0.1725,
+ "belly_depth_s": 0.1564,
+ "belly_half": 0.1748,
+ "pec_half": 0.1129,
+ "upper_arm_r": [
+  0.0666,
+  0.0545
+ ],
+ "forearm_r": [
+  0.0682,
+  0.0454
+ ],
+ "elbow_x": 0.5752,
+ "wrist_x": 0.7866,
+ "palm_rx": 0.0768,
+ "palm_ry": 0.0573,
+ "finger_r": 0.0129,
+ "foot_x_tilt": 0.1396,
+ "foot_w": 0.04,
+ "toe_y_tilt": 0.1669,
+ "leg_r": [
+  0.0724,
+  0.0491
+ ],
+ "skin": [
+  224,
+  219,
+  195
+ ],
+ "cap": {
+  "thick": 1.359,
+  "label": "hair"
+ },
+ "hair": [
+  47,
+  46,
+  52
+ ],
+ "swatch": {
+  "src": "Rigs/races/vampire_female/default/body.png",
+  "box": [
+   683,
+   132,
+   773,
+   223
+  ]
+ },
+ "look": "a vampire woman with ashen ivory-pale skin, a voluminous mane of thick wavy black hair parted at the centre, long pointed ears and a slim feminine build",
+ "dome": "mane of thick wavy black hair, parted at the centre and falling in broad waves",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a mane of thick wavy black hair with soft blue-grey sheen seen from above, coming to a widow's peak over the forehead, with, in the narrow strip along its bottom edge, a natural pale vampire face strongly foreshortened from above, dark slanted brows over shadowed eyes, a slim nose tip the same pale colour as the skin, closed lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_bushy": {
+   "size": 0.5,
+   "radius": 1.1,
+   "count": 13
+  },
+  "hair_long": {
+   "width": 2.0,
+   "depth": 1.05,
+   "back": 0.75,
+   "paint": "the hair on the shoulders as thick wavy black locks seen from above"
+  },
+  "bust": {
+   "size": 0.9
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.204 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.36",
+  "depth band widened to 0.309: with the legacy head size the humanoid figure is 0.297 deep (the head, not the camera, sets the depth)"
+ ],
+ "head_scale": 1.27,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.309
+ ],
+ "ear_len": 0.085
+}

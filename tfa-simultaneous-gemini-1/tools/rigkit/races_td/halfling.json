@@ -1,0 +1,85 @@
+{
+ "shoulder_half": 0.27,
+ "delt_r": 0.075,
+ "trunk_depth_n": 0.115,
+ "chest_depth_s": 0.17,
+ "belly_depth_s": 0.215,
+ "belly_half": 0.2,
+ "pec_half": 0.115,
+ "skull_r": 0.185,
+ "skull_y": 0.006,
+ "nose": [
+  0.012,
+  0.009
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.0,
+ "ear_len": 0.0,
+ "upper_arm_r": [
+  0.062,
+  0.05
+ ],
+ "forearm_r": [
+  0.05,
+  0.036
+ ],
+ "elbow_x": 0.56,
+ "wrist_x": 0.82,
+ "palm_rx": 0.058,
+ "palm_ry": 0.052,
+ "finger_r": 0.011,
+ "foot_x": 0.105,
+ "toe_y": 0.228,
+ "toe_r": 0.02,
+ "anat": {
+  "skull_r": 0.14,
+  "face_scale": 1.05,
+  "face_fwd": 0.03,
+  "head_z": 1.76,
+  "chest_depth_s": 0.15,
+  "belly_depth_s": 0.168,
+  "foot_x_tilt": 0.142,
+  "foot_w": 0.058,
+  "toe_y_tilt": 0.176,
+  "leg_r": [
+   0.075,
+   0.052
+  ]
+ },
+ "skin": [
+  206,
+  152,
+  122
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "hair": [
+  150,
+  108,
+  62
+ ],
+ "swatch": {
+  "src": "Rigs/races/halfling_male/default/body.png",
+  "box": [
+   170,
+   150,
+   300,
+   260
+  ]
+ },
+ "look": "a halfling man with warm light skin, a soft slim build and a big head of thick wavy light-brown hair",
+ "dome": "cap of thick wavy hair",
+ "dome_cover": "hair",
+ "dome_cover_tilt": "hair",
+ "head_extras": "At the middle of the dome's lower rim a small rounded nose tip touches the rim, lying on plain smooth chest skin.",
+ "skin_words": "warm peach skin hue, its lighter highlights",
+ "line_words": "heavy, crisp, dark red-brown contour line",
+ "face_tilt": "the fringe of the thick hair, right under it the brow shading the eye sockets into two dark slits, then the round tip of the nose, and just behind the nose the lips and the front of a soft round chin. Brow, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "torso_tilt": "first the top plane of the soft chest, then, below the chest, the top of a small round belly.",
+ "face_paint": "the head as a big cap of thick wavy hair seen from above with, in the narrow strip along its bottom edge, a natural halfling face strongly foreshortened from above, friendly brows over shadowed eyes, a round nose tip, closed lips and a soft chin",
+ "torso_paint": "the torso as one soft chest with a small round belly below it",
+ "abstract": true
+}

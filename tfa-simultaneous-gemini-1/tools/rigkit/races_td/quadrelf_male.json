@@ -1,0 +1,67 @@
+{
+ "base": "quadrelf_base",
+ "pack": "quadrelf_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.114,
+ "trunk_depth_n": 0.1795,
+ "chest_depth_s": 0.229,
+ "belly_depth_s": 0.2045,
+ "belly_half": 0.2107,
+ "pec_half": 0.1345,
+ "upper_arm_r": [
+  0.0972,
+  0.0796
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "elbow_x": 0.5635,
+ "wrist_x": 0.7667,
+ "palm_rx": 0.084,
+ "palm_ry": 0.0707,
+ "finger_r": 0.016,
+ "foot_x_tilt": 0.147,
+ "foot_w": 0.0569,
+ "toe_y_tilt": 0.202,
+ "leg_r": [
+  0.0905,
+  0.0575
+ ],
+ "skin": [
+  226,
+  177,
+  145
+ ],
+ "cap": {
+  "thick": 1.084,
+  "label": "hair"
+ },
+ "hair": [
+  128,
+  84,
+  58
+ ],
+ "swatch": {
+  "src": "Rigs/races/quadrelf_male/default/body.png",
+  "box": [
+   209,
+   47,
+   359,
+   196
+  ]
+ },
+ "look": "a quadrelf man with fair peach skin, short brown hair, pointed ears, a clean-shaven face and a powerful, heavily muscled build",
+ "dome": "cap of short brown hair combed in soft locks from the crown, with a small fringe at the front",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "face_paint": "the head as a cap of short brown hair in soft combed locks seen from above with, in the narrow strip along its bottom edge, a natural clean-shaven quadrelf face strongly foreshortened from above, calm brown brows over shadowed eyes, a skin-coloured nose tip, closed lips and the front of the chin",
+ "features": {},
+ "notes": [
+  "head-size rule: the legacy head frame (0.163 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.08"
+ ],
+ "head_scale": 1.394,
+ "head_pivot_z": 1.76,
+ "head_back": -0.02,
+ "ear_len": 0.047
+}

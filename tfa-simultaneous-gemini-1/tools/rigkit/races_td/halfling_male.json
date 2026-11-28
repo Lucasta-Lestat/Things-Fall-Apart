@@ -1,0 +1,158 @@
+{
+ "base": "halfling",
+ "pack": "halfling_male/default",
+ "shoulder_half": 0.3596,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.257,
+ "belly_half": 0.232,
+ "pec_half": 0.1354,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "elbow_x": 0.5616,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.17,
+ "foot_w": 0.0605,
+ "toe_y_tilt": 0.2146,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "head_z": 1.76,
+ "tusk_x_tilt": 0.046,
+ "anat": {
+  "skull_r": null,
+  "face_scale": null,
+  "face_fwd": null,
+  "head_z": null,
+  "chest_depth_s": null,
+  "belly_depth_s": null,
+  "foot_x_tilt": null,
+  "foot_w": null,
+  "toe_y_tilt": null,
+  "leg_r": null
+ },
+ "skin": [
+  222,
+  170,
+  137
+ ],
+ "hair": [
+  168,
+  126,
+  78
+ ],
+ "cap": {
+  "thick": 1.213,
+  "label": "hair",
+  "fwd": -0.08
+ },
+ "nose_tilt": [
+  0.0,
+  0.78
+ ],
+ "swatch": {
+  "src": "tools/rigkit/out/plan/halfling_male/swatch_src.png",
+  "box": [
+   0,
+   0,
+   320,
+   115
+  ]
+ },
+ "look": "a halfling man with warm light peach skin, a soft, stocky, round-bellied build with smooth thick arms, and a big tousled mop of thick wavy warm golden light-brown hair whose long fringe falls over the face down to the nose",
+ "dome": "big tousled mop of thick wavy golden light-brown hair, an uneven bushy mass of loose locks",
+ "dome_cover_tilt": "locks of the hair",
+ "line_words": "thin dark brown contour line of even weight",
+ "face_paint": "the head as a big tousled mop of thick wavy golden light-brown hair seen from above, loose soft dry locks of differing lengths tumbling from the crown in every direction to feathered tips, with an uneven bushy outline, the long fringe falling over the face down to the nose, and, in the narrow strip along the bottom edge under the fringe, a round skin-coloured nose tip, closed lips and a soft chin",
+ "arms_paint": "soft thick rounded shoulders across the shoulder band; short, smooth, thick, softly rounded level arms",
+ "features": {
+  "hair_bushy": {
+   "count": 13,
+   "size": 0.24,
+   "radius": 1.15,
+   "arc": [
+    36,
+    324
+   ],
+   "core": false
+  },
+  "tuft_back": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "at": [
+    0.42,
+    -1.2,
+    0.15
+   ],
+   "r": [
+    0.46,
+    0.24,
+    0.22
+   ],
+   "mirror": true
+  },
+  "tuft_side": {
+   "kind": "blob",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "at": [
+    1.2,
+    0.05,
+    0.1
+   ],
+   "r": [
+    0.3,
+    0.26,
+    0.22
+   ],
+   "mirror": true
+  }
+ },
+ "head_scale": 1.66,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.31
+ ],
+ "notes": [
+  "proxy re-measured from the legacy pack (the shared pilot base was slimmer than the legacy painting): stocky build, hair cap split from the skull",
+  "head-size rule: the legacy head frame (0.218 of the half span) is a circle on the hair mass; skull built at 0.180, hair cap x1.21",
+  "depth band widened to 0.310: with the legacy head size the humanoid figure is 0.298 deep (the head, not the camera, sets the depth)",
+  "corrective pass r3+: swatch is a composite (upper-arm skin + crown hair) built in out/plan/halfling_male/swatch_src.png; fringe to the nose; softer belly; eyes/brows left unnamed"
+ ],
+ "face_tilt": "the long fringe of the thick hair hanging down over the face as far as the nose, right under the fringe the round tip of the nose, and just behind the nose the lips and the front of a soft round chin. Fringe, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "finish": "chalky matte skin and soft matte hair, soft broad shading",
+ "swatch_of": "skin (left patch) and hair (right patch, a piece of the crown)",
+ "skin_words": "warm peach skin hue on the left patch, the warm golden light-brown of the tousled wavy hair locks on the right patch, their lighter highlights",
+ "torso_tilt": "first the top plane of the soft chest, then, below the chest, the top of a round soft belly.",
+ "torso_paint": "the torso as one soft fleshy chest with a round soft belly below it"
+}

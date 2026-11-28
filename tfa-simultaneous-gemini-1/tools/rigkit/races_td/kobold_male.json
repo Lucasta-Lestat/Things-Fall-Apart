@@ -1,0 +1,126 @@
+{
+ "base": "kobold_base",
+ "pack": "kobold_male/default",
+ "shoulder_half": 0.2661,
+ "delt_r": 0.0929,
+ "trunk_depth_n": 0.1457,
+ "chest_depth_s": 0.1893,
+ "belly_depth_s": 0.1707,
+ "belly_half": 0.1854,
+ "pec_half": 0.1193,
+ "upper_arm_r": [
+  0.0757,
+  0.0619
+ ],
+ "forearm_r": [
+  0.0775,
+  0.0516
+ ],
+ "palm_ry": 0.068,
+ "finger_r": 0.0154,
+ "foot_x_tilt": 0.1326,
+ "foot_w": 0.0665,
+ "toe_y_tilt": 0.1774,
+ "leg_r": [
+  0.0778,
+  0.0516
+ ],
+ "skin": [
+  62,
+  150,
+  82
+ ],
+ "swatch": {
+  "src": "Rigs/races/kobold_male/default/body.png",
+  "box": [
+   639,
+   153,
+   729,
+   254
+  ]
+ },
+ "look": "a male kobold, a dragon-like reptile-folk with emerald green scales, cream belly plates, golden-brown horns, a wedge-shaped dragon snout, yellow eyes and a strong build",
+ "skin_words": "emerald green scales, its lighter yellow-green highlights",
+ "line_words": "crisp, near-black green contour line",
+ "features": {
+  "snout": {
+   "len": 0.88,
+   "r": [
+    0.6,
+    0.36
+   ]
+  },
+  "horns": {
+   "style": "up",
+   "len": 1.9,
+   "r": [
+    0.2,
+    0.03
+   ],
+   "count": 1,
+   "gap": 0.35,
+   "guide": "A long horn rises from each side of the top of the head and curves backward.",
+   "paint": "the two long horns as smooth golden-brown horn"
+  },
+  "crest": {
+   "colour": "horn",
+   "count": 4,
+   "h": 0.35,
+   "w": 0.08,
+   "guide": "A row of four short spines runs along the middle of the top of the skull from front to back.",
+   "paint": "the row of skull spines as golden-brown horn"
+  },
+  "arm_fins": {
+   "at": 0.12,
+   "size": 0.035,
+   "colour": "horn",
+   "guide": "A short horn spike stands out from the back edge of each forearm beside the elbow.",
+   "paint": "each elbow spike as golden-brown horn"
+  },
+  "side_horns": {
+   "kind": "horns",
+   "root": [
+    0.92,
+    -0.35,
+    0.25
+   ],
+   "dir": [
+    0.75,
+    -0.6,
+    0.3
+   ],
+   "toward": [
+    0.0,
+    -0.8,
+    0.6
+   ],
+   "curl": 30,
+   "len": 1.0,
+   "r": [
+    0.16,
+    0.03
+   ],
+   "guide": "A shorter horn points outward and backward from each side of the head, lower down.",
+   "paint": "the two short side horns as the same golden-brown horn"
+  }
+ },
+ "head_scale": 1.348,
+ "colours": {
+  "horn": [
+   196,
+   146,
+   62
+  ]
+ },
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "spread": 0.42
+ },
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a wedge-shaped scaled snout that juts forward to a blunt tip with two nostrils on top. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a scaled top of the skull seen from above with, in the narrow strip along its bottom edge, a natural kobold face strongly foreshortened from above, a scaled brow over shadowed yellow eyes and a wedge-shaped green snout with two nostrils",
+ "torso_paint": "the torso as one athletic chest of green scales with broad cream belly plates down its middle",
+ "hands_paint": "each hand with five well-formed scaled fingers that end in curved golden-brown claws",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four scaled toes ending in golden-brown claws"
+}

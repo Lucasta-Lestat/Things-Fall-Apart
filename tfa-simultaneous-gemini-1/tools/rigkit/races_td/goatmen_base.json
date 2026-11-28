@@ -1,0 +1,56 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.085,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "ear_tilt": [
+  0.03,
+  -0.01,
+  -0.05
+ ],
+ "foot": {
+  "kind": "hoof"
+ },
+ "dome": "furred top of the skull",
+ "dome_cover_tilt": "skull",
+ "skin_words": "shaggy brown fur, its lighter highlights",
+ "line_words": "crisp, near-black brown contour line",
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a long goat muzzle that juts forward to a soft dark nose. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it. A long drooping goat ear sticks out sideways from each side of the head.",
+ "face_paint": "the head as a furred top of the skull seen from above with, in the narrow strip along its bottom edge, a natural goat-folk face strongly foreshortened from above, a furred brow over shadowed eyes and a long goat muzzle with a dark nose",
+ "arms_paint": "the shoulder band and the level arms covered in short fur that follows the muscles beneath",
+ "feet_tilt": "At the very bottom the fronts of the two cloven hooves stand on the floor far below, pointing at the bottom of the picture, each hoof two blunt halves side by side.",
+ "feet_paint": "each hoof as dark horn split into two halves",
+ "swatch_of": "fur",
+ "finish": "matte short fur",
+ "colours": {
+  "horn": [
+   150,
+   128,
+   96
+  ]
+ },
+ "features": {
+  "snout": {
+   "len": 1.0,
+   "r": [
+    0.52,
+    0.38
+   ]
+  }
+ }
+}

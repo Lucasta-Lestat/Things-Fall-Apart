@@ -1,0 +1,73 @@
+{
+ "base": "naga_base",
+ "pack": "naga_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.1087,
+ "trunk_depth_n": 0.1711,
+ "chest_depth_s": 0.2192,
+ "belly_depth_s": 0.1961,
+ "belly_half": 0.2044,
+ "pec_half": 0.1307,
+ "upper_arm_r": [
+  0.0919,
+  0.0752
+ ],
+ "forearm_r": [
+  0.0891,
+  0.0594
+ ],
+ "elbow_x": 0.5885,
+ "wrist_x": 0.7687,
+ "palm_rx": 0.1083,
+ "palm_ry": 0.0837,
+ "finger_r": 0.0179,
+ "foot_x_tilt": 0.17,
+ "foot_w": 0.0675,
+ "toe_y_tilt": 0.1959,
+ "leg_r": [
+  0.0874,
+  0.056
+ ],
+ "skin": [
+  162,
+  143,
+  203
+ ],
+ "swatch": {
+  "src": "Rigs/races/naga_male/default/body.png",
+  "box": [
+   188,
+   73,
+   331,
+   196
+  ]
+ },
+ "look": "a male naga, a serpent-folk with lavender scales, a smooth snake head with yellow slit-pupil eyes, a pale ribbed belly, a muscular build and a long serpent tail",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and, below them, a firm upper belly of pale lavender ribbed belly plates",
+ "features": {
+  "tail": {
+   "len": 0.66,
+   "r": [
+    0.12,
+    0.02
+   ],
+   "curl": 180,
+   "side": 1,
+   "paint": "the tail as a thick tapering serpent tail in the same lavender scales",
+   "tip": 0.5,
+   "guide": "Behind the character a thick serpent tail lies on the floor: it comes out past the back, curls round toward the right of the picture, passes under the arm and runs forward to a tapering tip beside the feet.",
+   "tip_curl": -40,
+   "taper": 2.2
+  }
+ },
+ "symmetry_words": "the body left-right symmetric",
+ "head_scale": 1.195,
+ "notes": [
+  "hands drawn 16 % wider than the draft: the legacy pack's world scale (0.0594, span 59 world px; naga_female is 156) makes a normal palm smaller than derive.PALM_MIN_WORLD, which would drop the grip pose"
+ ],
+ "dome": "smooth top of the skull, covered in broad flat lavender plate scales",
+ "face_paint": "the head as a smooth top of the skull in broad flat plate scales seen from above with, in the narrow strip along its bottom edge, a natural naga face strongly foreshortened from above, a smooth scaled brow over two yellow slit-pupil eyes and a broad flat snake snout with two small nostrils",
+ "hands_paint": "each hand with five well-formed fingers with smooth rounded tips",
+ "feet_paint": "each foot front with three long toes ending in short pale lavender claws"
+}

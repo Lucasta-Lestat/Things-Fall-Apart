@@ -19,8 +19,8 @@ import numpy as np
 from . import core
 
 RACES = ["human", "orc", "halfling_male", "goblin_male", "naga_male", "dwarf_female"]
-HAND_RACES = [("orc", "tilt15_head"), ("orc", "ashen"), ("human", "default"), ("goblin_male", "default"),
-              ("naga_male", "default"), ("kobold_female", "default")]
+HAND_RACES = [("orc", "default"), ("orc", "ashen"), ("orc", "legacy"), ("human", "default"),
+              ("goblin_male", "default"), ("naga_male", "default"), ("kobold_female", "default")]
 GLOVES = ["plate_gauntlet", "leather_glove"]
 OUT = os.path.join(core.ROOT, "tests", "fixtures", "rig2_parity.json")
 
@@ -71,7 +71,7 @@ def hands(skel):
     return out
 
 
-BODY_RACES = HAND_RACES + [("orc", "default"), ("halfling_male", "default"), ("dwarf_female", "default")]
+BODY_RACES = HAND_RACES + [("goblin_male", "legacy"), ("halfling_male", "default"), ("dwarf_female", "default")]
 
 
 def body(skel):
@@ -85,6 +85,29 @@ def body(skel):
                              "head_box": [round(v, 2) for v in box] if box else None,
                              "trunk": "trunk" in race.get("overlays", {})})
     return out
+
+
+def _frame(lx):
+    return {"o": [1.0, 2.0], "ax": [1.0, 0.0], "lx": lx, "ly": 3.0}
+
+
+def variants():
+    """Variant inheritance (core.merge_variant): two synthetic parent/child pairs with the merged
+    result, and the frame names every real pack resolves to. A new build that drops frames (no legs
+    from its camera) must not get them back from its parent; a re-skin must keep them all."""
+    base = {"id": "x", "variant": "default", "art": "body.png", "labels": "labels.png", "world_scale": 0.1,
+            "size": [100, 80], "pinned": ["torso"], "notes": ["n"], "parts": {"hand_l": {"step": 2, "runs": []}},
+            "overlays": {"head": {"file": "head.png", "offset": [1, 2]}},
+            "frames": {"torso": _frame(10.0), "leg_l": _frame(4.0), "leg_r": _frame(4.0)}}
+    cases = []
+    for name, own in (("re-skin", {"inherits": "default", "variant": "ashen", "art": "body.png"}),
+                      ("re-skin with a frame", {"inherits": "default", "variant": "scar", "frames": {"torso": _frame(11.0)}}),
+                      ("new build, legs gone", {"inherits": "default", "variant": "heavy", "labels": "labels.png",
+                                                "size": [120, 90], "frames": {"torso": _frame(12.0)}}),
+                      ("new build, not built yet", {"inherits": "default", "variant": "tall", "labels": "labels.png"})):
+        cases.append({"name": name, "base": base, "own": own, "merged": core.merge_variant(base, own)})
+    packs = [{"race": r, "variant": v, "frames": sorted(core.load_race(r, v)["frames"])} for r, v in core.list_races()]
+    return {"cases": cases, "packs": packs}
 
 
 def main():
@@ -105,7 +128,7 @@ def main():
                               "sample_step": step,
                               "sample": [[round(float(x), 3), round(float(y), 3)] for x, y in pts[::step]]})
     h = hands(skel)
-    core.save_json(OUT, {"cases": cases, "hands": h, "body": body(skel)})
+    core.save_json(OUT, {"cases": cases, "hands": h, "body": body(skel), "variants": variants()})
     print("wrote %s (%d cases, %d hand races, %d held items)" % (os.path.relpath(OUT, core.ROOT), len(cases),
                                                                 len(h["races"]), len(h["held"])))
     return 0

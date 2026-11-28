@@ -1,0 +1,57 @@
+{
+ "base": "saurian_base",
+ "pack": "saurian_male/default",
+ "shoulder_half": 0.3446,
+ "elbow_x": 0.5647,
+ "wrist_x": 0.792,
+ "palm_rx": 0.0749,
+ "palm_ry": 0.069,
+ "finger_r": 0.0156,
+ "foot_x_tilt": 0.1385,
+ "foot_w": 0.0705,
+ "skin": [
+  102,
+  112,
+  74
+ ],
+ "swatch": {
+  "src": "Rigs/races/saurian_male/default/body.png",
+  "box": [
+   223,
+   82,
+   373,
+   229
+  ]
+ },
+ "look": "a male saurian, a lizard-folk with a green crocodile-like scaled hide, a long reptile snout, a ridge of spines down the back and a heavy build",
+ "skin_words": "olive-green scaled hide, its lighter highlights",
+ "features": {
+  "dorsal_fin": {
+   "h": 0.2,
+   "w": 0.02,
+   "guide": "A ridge of short spines runs down the middle of the upper back behind the head.",
+   "paint": "the back ridge as a row of short spines",
+   "y": [
+    -0.06,
+    -0.26
+   ],
+   "count": 4
+  },
+  "snout": {
+   "len": 1.25,
+   "r": [
+    0.74,
+    0.4
+   ]
+  }
+ },
+ "head_scale": 1.18,
+ "foot": {
+  "kind": "claw",
+  "toes": 4
+ },
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four long toes ending in short pale horn claws",
+ "hands_paint": "each hand with five well-formed fingers that end in short pale horn claws",
+ "arms_paint": "the shoulder band and the level arms covered in large squarish crocodile scutes over heavy muscle"
+}

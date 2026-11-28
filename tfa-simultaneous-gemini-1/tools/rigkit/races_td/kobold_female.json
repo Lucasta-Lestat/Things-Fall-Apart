@@ -1,0 +1,122 @@
+{
+ "base": "kobold_base",
+ "pack": "kobold_female/default",
+ "shoulder_half": 0.2735,
+ "delt_r": 0.0944,
+ "trunk_depth_n": 0.148,
+ "chest_depth_s": 0.192,
+ "belly_depth_s": 0.16,
+ "belly_half": 0.172,
+ "pec_half": 0.1204,
+ "upper_arm_r": [
+  0.0772,
+  0.0631
+ ],
+ "forearm_r": [
+  0.0752,
+  0.0501
+ ],
+ "palm_ry": 0.0699,
+ "finger_r": 0.0158,
+ "foot_x_tilt": 0.1291,
+ "foot_w": 0.0716,
+ "toe_y_tilt": 0.179,
+ "leg_r": [
+  0.0787,
+  0.052
+ ],
+ "skin": [
+  124,
+  84,
+  47
+ ],
+ "swatch": {
+  "src": "Rigs/races/kobold_female/default/body.png",
+  "box": [
+   606,
+   160,
+   670,
+   206
+  ]
+ },
+ "look": "a female kobold, a small dragon-like reptile-folk covered in deep brown-orange ochre scales, with a narrow cream band of belly plates down the middle of the chest, a horned dragon head with a broad blunt snout and a sturdy compact build",
+ "skin_words": "deep brown-orange ochre scales, its small overlapping scale pattern",
+ "line_words": "thin, crisp, dark brown contour line",
+ "features": {
+  "snout": {
+   "len": 1.0,
+   "r": [
+    0.56,
+    0.36
+   ]
+  },
+  "horns": {
+   "len": 1.9,
+   "r": [
+    0.27,
+    0.04
+   ],
+   "root": [
+    0.62,
+    -0.35,
+    0.75
+   ],
+   "dir": [
+    0.75,
+    -0.6,
+    0.45
+   ],
+   "toward": [
+    -1.0,
+    -0.5,
+    0.2
+   ],
+   "curl": 75,
+   "guide": "A thick horn rises from each side of the back of the head, sweeps outward and backward and curves inward toward its tip.",
+   "paint": "the two horns as ridged warm brown-grey horn with a tan highlight"
+  },
+  "cheek_spike": {
+   "kind": "rod",
+   "space": "head",
+   "a": [
+    0.85,
+    0.05,
+    -0.25
+   ],
+   "b": [
+    1.12,
+    -0.08,
+    -0.2
+   ],
+   "r": [
+    0.13,
+    0.04
+   ],
+   "mirror": true,
+   "core": false,
+   "guide": "",
+   "paint": ""
+  }
+ },
+ "head_scale": 1.319,
+ "colours": {
+  "horn": [
+   120,
+   100,
+   80
+  ]
+ },
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "toe_len": 1.0,
+  "spread": 0.34
+ },
+ "face_paint": "the head as a top of the skull seen from above covered in small overlapping scales, with a row of raised keeled scales along its midline and, in the narrow strip along its bottom edge, a natural kobold face strongly foreshortened from above, a heavy scaled brow over small pale eyes and a broad blunt snout with two nostrils",
+ "torso_paint": "the torso as a sturdy chest whose middle is a narrow band of cream-coloured banded belly plates, framed on both sides by flanks of small overlapping deep ochre scales, and a flat upper belly below",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with four toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four scaled toes ending in short dark claws",
+ "arms_paint": "the shoulder band and the level arms covered all over in small overlapping deep ochre scales, each scale edged with a fine brown line",
+ "finish": "soft matte painterly scaled skin with low contrast",
+ "note": "Small overlapping scales cover the whole body, densely and evenly, in a deep brown-orange ochre midtone."
+}

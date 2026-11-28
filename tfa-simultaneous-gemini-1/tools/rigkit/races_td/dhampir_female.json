@@ -1,0 +1,91 @@
+{
+ "base": "dhampir_base",
+ "pack": "dhampir_female/default",
+ "shoulder_half": 0.2942,
+ "delt_r": 0.0898,
+ "trunk_depth_n": 0.1407,
+ "chest_depth_s": 0.1835,
+ "belly_depth_s": 0.1657,
+ "belly_half": 0.1817,
+ "pec_half": 0.1171,
+ "upper_arm_r": [
+  0.0725,
+  0.0593
+ ],
+ "forearm_r": [
+  0.0671,
+  0.0447
+ ],
+ "elbow_x": 0.538,
+ "wrist_x": 0.7932,
+ "palm_rx": 0.0744,
+ "palm_ry": 0.0552,
+ "finger_r": 0.0125,
+ "foot_x_tilt": 0.1302,
+ "foot_w": 0.0515,
+ "toe_y_tilt": 0.1738,
+ "leg_r": [
+  0.0759,
+  0.0507
+ ],
+ "skin": [
+  222,
+  216,
+  191
+ ],
+ "cap": {
+  "thick": 1.402,
+  "label": "hair"
+ },
+ "hair": [
+  52,
+  55,
+  63
+ ],
+ "swatch": {
+  "src": "Rigs/races/dhampir_female/default/body.png",
+  "box": [
+   671,
+   87,
+   758,
+   182
+  ]
+ },
+ "look": "a dhampir woman with chalk-pale ivory skin, long straight blue-black hair parted in the centre, and a slim build",
+ "dome": "cap of long straight black hair combed down from a centre parting",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a cap of long straight black hair parted in the centre and seen from above, with fine strands running from the parting down to the sides and the hair falling over the forehead down to the brows, and, in the narrow strip along its bottom edge, a natural pale dhampir face strongly foreshortened from above, calm dark brows over closed shadowed eyelids, a nose tip of the same chalk-pale ivory as the cheeks, closed pale lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_long": {
+   "width": 2.15,
+   "depth": 1.0,
+   "paint": "the hair on the shoulders as long straight locks seen from above"
+  },
+  "locks": {
+   "x": 0.9,
+   "out": 0.25,
+   "fwd": [
+    0.55,
+    1.25
+   ],
+   "len": 1.5,
+   "r": [
+    0.3,
+    0.16
+   ],
+   "guide": "A long straight lock of hair hangs forward over each collarbone beside the face.",
+   "paint": "each front lock as a straight strand of black hair lying on the chest"
+  },
+  "bust": {
+   "size": 0.6
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.210 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.40"
+ ],
+ "head_scale": 1.38,
+ "hands_paint": "each hand with five slender well-formed fingers, knuckles and pointed dark grey fingernails",
+ "note": "The whole face is one even chalk-pale ivory with cool grey shading, and the ears stay tucked under the hair."
+}

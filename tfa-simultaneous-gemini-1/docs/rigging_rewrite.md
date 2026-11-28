@@ -127,10 +127,14 @@ All anatomy is measured from the label map and nothing else (`tools/rigkit/deriv
 
 A **variant** is a sibling folder:
 
-- Re-skin (scars, skin tone, tattoos): `body.png` painted on the parent's canvas plus `{"inherits": "default"}`. Nothing else. `Rigs/races/orc/ashen/` is a working example.
+- Re-skin (scars, skin tone, tattoos): `body.png` painted on the parent's canvas plus `{"inherits": "default"}`. Nothing else. `Rigs/races/orc/ashen/` is a working example (`python -m tools.rigkit.reskin orc ashen` makes it from the current default).
 - New build (heavier, taller): its own `body.png` and `labels.png` plus `{"inherits": "default", "labels": "labels.png"}`.
 
 Then `python -m tools.rigkit.build_race <race>/<variant>`.
+
+What a variant inherits (`core.merge_variant`, mirrored by `RigLibrary.merge_variant`): a re-skin takes every missing key and frame from its parent. A new build takes identity and world scale only. Its frames, hand cut-outs, overlays, size and pins are measured from its own label map and never come from the parent, so a new build whose camera hides the legs has no leg frames. Before 2026-11-28 it kept the parent's.
+
+**`legacy` variants.** When a repainted race is promoted (`python -m tools.rigkit.promote_race <race>`), the repaint becomes `<race>/default` and the old painting stays as the standalone variant `<race>/legacy`. Nothing is lost and before/after sheets stay possible. `gen_plan` and `install_plan` read head size, fingertip span and the skin swatch from `<race>/legacy` when it exists.
 
 ### 3.3 Items are data
 
@@ -291,20 +295,23 @@ A brand-new item has no earlier art, so put any picture of its material at `tool
 
 ### 4.2 What fails the spec today
 
-**Races.** The label maps give an objective signal: a race whose thighs are visible has a leg label, and thighs are only visible when the camera is well off vertical.
+Updated 2026-11-28, after the race batch (section 4.3, "Race batch").
 
-- **34 of 52 packs show legs**, so are painted from a high three-quarter view with the face fully visible: orc, orc_female, half_orc (both), goblin (both), cerebrals (both), draconian (both), goatmen (both), goluna (both), grimalkin (both), kobold (both), naga (both), newt (both), saurian (both), human_undead (both), vampire (both), dhampir (both), human_female, half_elf_female, mephistkin_female, quadrelf_female.
-- **18 packs are overhead**: human, elf, halfling (both), gnome (both), dwarf (both), aedelf (both), sobruaro (both), sahuagin (both), half_elf_male, high_elf_female, mephistkin_male, quadrelf_male.
+**Races.** Of the 52 default packs:
 
-By eye the split is the same, with two caveats. dwarf_male and both aedelf hide their legs but still show the whole face. half_elf_female is a different problem: older clothed art, standing, legs fully drawn.
+- **17 are on the standard** (repainted, judged, promoted): orc, half_orc_male, goblin_male, human_female, half_elf_male, high_elf_female, aedelf (both), dwarf (both), draconian (both), grimalkin (both), cerebrals_female, dhampir_female, goatmen_female. Their old paintings are the `legacy` variants.
+- **23 still show legs**, so are legacy three-quarter views with the face fully visible: cerebrals_male, dhampir_male, goatmen_male, goblin_female, goluna (both), half_elf_female, half_orc_female, human_undead (both), kobold (both), mephistkin_female, naga (both), newt (both), orc_female, quadrelf_female, saurian (both), vampire (both).
+- **12 are legacy overhead paintings** with hidden legs but their own camera: human, elf, halfling (both), gnome (both), mephistkin_male, quadrelf_male, sahuagin (both), sobruaro (both).
 
-The practical damage from the three-quarter view is that the head sits in front of the chest rather than on top of the shoulders. Collars cannot close around a neck, helmets drawn from above sit on a face, and the two camera angles look wrong side by side in a crowd.
+The label maps give the objective signal: a race whose thighs are visible has a leg label, and thighs are only visible when the camera is well off vertical.
 
-**Items.** The fit gate measures how much each item's art is distorted to fit a top-down body.
+The practical damage from the three-quarter view is that the head sits in front of the chest rather than on top of the shoulders. Collars cannot close around a neck, helmets drawn from above sit on a face, and the two camera angles look wrong side by side in a crowd. Boots are the clearest case today: the repainted boot and sabaton have an ankle cuff that draws as an empty ring over the thighs of the 23 legged packs (see "Race batch").
 
-- All nine torso garments are painted as front views. They are squashed to between 45 % and 60 % of their height on most races (the gate reports "art stretched x1.7 to x2.2"). The old pipeline compensated with `ref_aspect`.
-- `great_helm`, `plate_sabaton`, `steel_greaves`, `leather_pants` and `armored_leggings` are front or side views.
-- `dark_robes` has a flared hem that floats off narrow bodies.
+**Items.** All 14 worn items with a rig2 pack are painted for the race camera. Still open:
+
+- `breastplate` is being redone separately.
+- `venonan_vestament`, `steel_greaves`, `leather_pants` and `armored_leggings` have no rig2 pack.
+- Body armour sits a little off the body on some repainted races (10 to 20 % "off the body" WARN rows for `dark_robes`, `leather_armor`, `legionnaires_armor`), most on big-headed races where the head covers the chest.
 
 ### 4.3 Art redo proposal (needs your approval; nothing has been regenerated)
 
@@ -312,7 +319,7 @@ The Gemini key works again as of this run (it was out of credits on 2026-11-01).
 
 **Batch A: races to the overhead camera.** Regenerate the 34 three-quarter races, image-to-image from their current painting, with the human male as the camera reference. Each needs a new label map (auto-draft plus a pass by eye) and then `build_race`. Order: orc and orc_female first, since they are the named problem and the most common enemy, then half_orc, goblin, human_female and the launch-map races, then the rest.
 
-**Status 2026-11-27.** Batch B and C: done for 11 of 14 worn items (Pilot 7 below); `breastplate`, `leather_boot` and `plate_sabaton` are painted but wait as `_td` packs. `venonan_vestament`, `steel_greaves` and the two pants have no rig2 pack yet and were not painted. Batch A: only the orc (`orc/tilt15_head`); it is next.
+**Status 2026-11-28.** Batch A: 17 of 52 races promoted to the standard, 3 held, 14 painted but rejected, 18 not painted because the Gemini credits ran out (see "Race batch" below). Batch B and C: 13 of 14 worn items promoted; `leather_boot` and `plate_sabaton` were promoted with the races, `breastplate` is being redone. `venonan_vestament`, `steel_greaves` and the two pants have no rig2 pack yet and were not painted.
 
 **Batch B: torso garments from above.** Regenerate the nine garments as true overhead views with a visible back panel: peasants_stained_shirt, nobles_blouse, dark_robes, padded_vest, leather_armor, chain_shirt, legionnaires_armor, breastplate, venonan_vestament.
 
@@ -379,7 +386,7 @@ Open after the install:
 - **Gauntlets squash (x0.43) and gloves leave fingertips bare** on the spread-finger hands. Fixed by the hand rig, section 3.6.
 - **The upper-arm frame tilts about 5.6 degrees** because the armpit seam's centre sits below the arm's centre line.
 - **Front-view item art is now the main visual problem** (batches B and C): `great_helm` leaves jaw, tusks and ears out; shirt, vest and robes stretch x1.7 to x1.9; the breastplate collar reads as a wide ring.
-- **Variant inheritance leaks frames**: a new-build variant that uses `inherits` keeps the parent's leg frames (section 3.2 recipe). Not fixed; the pack avoids it by being standalone.
+- **Variant inheritance leaks frames**: a new-build variant that uses `inherits` keeps the parent's leg frames (section 3.2 recipe). Fixed 2026-11-28 (`core.merge_variant`, section 3.2).
 - The parity fixture has no vertex samples for `orc/tilt15` yet.
 
 *Second race.* Human and halfling tilted guides now pass the depth band (0.257 and 0.276), and a goblin entry was added and painted (`tools/rigkit/out/plan/goblin/tilt15_pilot_*`, 4 of 4 pass the gate, IoU 0.94-0.99, depth/span 0.277 against the orc's 0.270). Camera matches the orc. Style holds in 2 of 4 (best `tilt15_pilot_1`). Open: the goblin came out muscular, not wiry; its big head and ears cover most of the chest and shoulder tops, so torso items will have little visible area; eye sockets are large dark hollows. The halfling's face strip is very thin under the fringe, so its first painting is a risk. Guides side by side: `tools/rigkit/out/plan/tilt15_guides_sheet.jpg`.
@@ -453,7 +460,115 @@ Open problems:
 - `padded_vest` had 18 key-colour specks in the lacing recoloured by hand after install; a re-install from `r1_3.png` brings them back.
 - `gen_item sheet` and `compare` need both an original and a `_td` pack, so they only work for the three waiting items now. `pilot_sheet.jpg` and each item's `compare.jpg` are records from before promotion.
 
-I recommend finishing the pilot before any batch: one orc and one shirt you are happy with, reviewed on a contact sheet against the current art. If batch A is approved, most `leg` frames disappear and the legs slot can be retired for bipeds.
+**Race batch (2026-11-28, about 245 generations).** Every race was given a spec (`tools/rigkit/races_td/<race>.json`), a guide, up to three sets of four paintings and an independent judge, with one corrective pass. The Gemini credits ran out part-way, so 18 races were never painted and several got fewer sets than planned.
+
+| | Races |
+|---|---|
+| Promoted to `default` (old painting kept as `legacy`) | 17 |
+| Hold: judge still unhappy, `tilt15` pack waits beside the legacy default | 3 |
+| Rejected: `tilt15` pack installed but not good enough, legacy stays default | 14 |
+| Not painted (no credits) | 18 |
+
+Sheets: `tools/rigkit/out/plan/races_before_after_1..4.jpg` (legacy against repaint, same world scale, all 34 painted races) and `races_crowd_after.jpg` (the 17 promoted races dressed, one world scale). Each race's own record is `tools/rigkit/out/plan/<race>/compare.jpg`. The verdicts are in `tools/rigkit/out/plan/race_batch_status.json`.
+
+Fit gate on the 52 default packs, 21 items, 1,508 rows (ok / WARN / FAIL). "Before" is the legacy defaults with the old boot and sabaton art (`tools/rigkit/out/plan/gate_before_races.txt`, which also lists the waiting packs).
+
+| | Before | After |
+|---|---|---|
+| All 52 default packs | 1,321 / 138 / 49 | 1,420 / 79 / 9 |
+| The 17 promoted races | 442 / 37 / 14 | 469 / 24 / 0 |
+| The 35 others (only the boots changed) | 879 / 101 / 35 | 951 / 55 / 9 |
+| Every pack incl. `legacy`, `tilt15`, `orc/ashen` (88 before, 87 after) | 2,575 / 271 / 58 | 2,384 / 129 / 10 |
+
+The 9 remaining FAILs on default packs: 8 are `human_undead_male` (torso depth, section 7) and one is `leather_armor` on `human`. Parity test: 2,193 checks, 0 failures.
+
+| Race | Generations | Final | Main open problem |
+|---|---|---|---|
+| orc | pilots 4-6 | promoted | Trunk area 19 % smaller than a small-head orc (head-size rule) |
+| aedelf_female | 12 | promoted | Arms more muscular than the slim legacy; ears shorter and flatter |
+| aedelf_male | 12 | promoted | Hair tidier and narrower; labels need `relabel_hair.py` after any reinstall |
+| cerebrals_female | 8 | promoted | Shoulders broader; labels need `fix_head_ring.py` after any reinstall |
+| dhampir_female | 8 | promoted | Contour partly synthetic (`prep_contour.py`); face fully shown; three-step install |
+| draconian_female | 8 | promoted | Pale belly plate much larger than legacy; a few grey pixels in finger webs |
+| draconian_male | 8 | promoted | Horns thicker and more upright; three cheek spines against two |
+| dwarf_female | 12 | promoted | Head 6.5 % smaller than legacy; hair redder; beard shorter |
+| dwarf_male | 8 | promoted | Beard much shorter; hair more orange; grey slivers in finger webs |
+| goatmen_female | 4 | promoted | Five human fingers where legacy has three hoofed digits; horns greyer |
+| goblin_male | 4 | promoted | Head hides most of the torso; reinstall needs `--no-head-snap` |
+| grimalkin_female | 4 | promoted | Shoulders stockier than legacy; head 6.4 % larger |
+| grimalkin_male | 8 | promoted | Hair more golden and centre-parted; depth/span 0.324 |
+| half_elf_male | 7 | promoted | Pale band across the hair; ears splay outward; heavier build |
+| half_orc_male | 8 | promoted | Skin slightly darker; stockier trunk; head 4.6 % larger |
+| high_elf_female | 8 | promoted | Stern face; head 5 % larger; reinstall needs `relabel_hair.py` |
+| human_female | 4 | promoted | Hair tidier; reinstall needs the `r1fix` guide |
+| cerebrals_male | 8 | hold | Glossy, heavy outline, grey skin, human eyes; no corrective paint (credits) |
+| dhampir_male | 12 | hold | Flared ears, bowl-cap hair, cold grey skin; corrective set not painted (credits) |
+| half_elf_female | 4 | hold | Glossy wig-like hair in the wrong colour; new guide never painted (credits) |
+| elf | 12 | rejected | Over-muscled; hair mass smaller and darker; face now shown |
+| gnome_female | 8 | rejected | Reads male: flat pectorals and a stern face; cap shape drifted |
+| gnome_male | 8 | rejected | Glossy cap, pink bulb nose; head 6.9 % larger |
+| goatmen_male | 12 | rejected | Horn shape wrong; great helm breaks (horns lie over the shoulders) |
+| goblin_female | 4 | rejected | Glossy scalp; nose and warts lost; `legionnaires_armor` FAIL |
+| goluna_female | 12 | rejected | Feather crest and feathered arms lost; glossy; keying bite at the armpit |
+| goluna_male | 12 | rejected | Feather coat lost on arms and chest; wings redesigned |
+| half_orc_female | 8 | rejected | Reads male; glossy; one ear labelled trunk |
+| halfling_female | 4 | rejected | Reads male; bowl cut where legacy has a parted fringe |
+| halfling_male | 4 | rejected | Full face where the fringe hid it; red contour (credits ran out after one set) |
+| human | 5 | rejected | Orange lozenges read as eye slits; hair straight where legacy is curled |
+| human_undead_female | 2 | rejected | Doll face, decay lost; keying ate the fingers (2 images only) |
+| human_undead_male | 5 | rejected | Frontal skull face; bald where legacy has hair |
+| kobold_female | 2 | rejected | Too light and yellow; ear-like fins; cel finish (2 images only) |
+| 18 others | 0 | not painted | kobold_male, mephistkin (both), naga (both), newt (both), orc_female, quadrelf (both), sahuagin (both), saurian (both), sobruaro (both), vampire (both): guide and spec tuned, every call returned HTTP 402 |
+
+What else changed with the batch:
+
+- **`leather_boot` and `plate_sabaton` promoted.** On the 17 repainted races they sit right: the cuff tucks under the trunk. On the 23 legacy packs with visible legs the ankle cuff still draws as an empty ring on the thighs or belly when nothing is worn over it. The gate does not see this. It goes as those races are repainted; until then the old art is at `tools/rigkit/out/items_td/<item>/original.png`.
+- **`orc/tilt15_head` is `orc/default`**, the old orc is `orc/legacy`, the small-head `orc/tilt15` is deleted, and `orc/ashen` was made again from the new default (`python -m tools.rigkit.reskin orc ashen`).
+- **Variant inheritance no longer leaks frames** (section 3.2); the parity test has a VARIANTS section for it.
+
+Open problems from the batch:
+
+- **Hand fix-ups outside the tools.** Six promoted packs carry label or contour fixes made by per-race scripts in `tools/rigkit/out/plan/<race>/` (see the table). Re-running `install_plan` alone on those paintings undoes them. `build_race` is safe: it only reads the installed `labels.png`.
+- **Shared-code defects the painters worked around, not fixed:** `install_plan.snap_head` leaves a ring of trunk label round a head that stands clear of the trunk (bald heads, hats, horns), which stretches the torso frame; it does not re-cut hair against face or bare shoulder when the painting differs from the guide; `install_plan.key` eats a contour of about 3 px or less on pale skin and leaves grey wedges between fingers; `fix_shoulders` misplaces the cut under a thick horn; `gen_plan gen` crashes in `contact_sheet` when every call fails.
+- **The shared prompt asks for "highlights per muscle and one on the scalp"**, which is the gloss and over-muscling the judges rejected most often. Female and slim builds came out muscular in most sets.
+- **Head size is within about 7 % of legacy, not exact** (skull frame x world scale, over 5 %: dwarf_female -6.7 %, grimalkin_female +6.4 %, aedelf_female +6.0 %, draconian_female +5.5 %; high_elf_female, aedelf_male, half_orc_male and grimalkin_male are 4.5 to 5.0 % off). Fingertip span is exact on all 17.
+- **Face larger than a strip** on most haired races; accepted where it matched the approved orc.
+- **Finger count is fixed at five** in the guide (goatmen, sobruaro, saurian and newt have three or four in legacy).
+- Nothing was looked at in the running game: headless Godot does not render.
+
+**Add a new race** (or repaint one):
+
+```bash
+# 1. write tools/rigkit/races_td/<race>.json (fields: races_td/README.md)
+python -m tools.rigkit.gen_plan guide --race <race>            # look at guide_t15_tint.png
+python -m tools.rigkit.gen_plan headsize --race <race>         # repaint only: nudge head_scale until the ratio is 1.00
+python -m tools.rigkit.gen_plan gen --race <race> --n 4 --tag r1
+python -m tools.rigkit.install_plan tools/rigkit/out/plan/<race>/r1_2.png --race <race> --variant tilt15
+python -m tools.rigkit.check --races <race>/tilt15
+python -m tools.rigkit.gen_plan compare --race <race>          # legacy against the repaint
+python -m tools.rigkit.promote_race <race>                     # tilt15 -> default, old default -> legacy
+python -m tools.rigkit.export_parity
+godot --headless --path . --import
+```
+
+A brand-new race has nothing to match, so install it straight as the default with a size: `install_plan <painting> --race <race> --variant default --world-scale 0.12`.
+
+**Add a variant of an existing race:**
+
+```bash
+# re-skin (same outline): paint Rigs/races/<race>/<variant>/body.png on the default's canvas and write
+#   race.json = {"inherits": "default", "variant": "<variant>", "art": "body.png"}
+# or let the tool recolour the default:
+python -m tools.rigkit.reskin <race> <variant> --tint 0.975,0.985,0.86
+# new build (different outline): paint it from its own spec and install it beside the default
+python -m tools.rigkit.install_plan <painting.png> --race <race> --variant <variant> --match <race>/default
+# either kind, after any edit to its body.png or labels.png:
+python -m tools.rigkit.build_race <race>/<variant>
+python -m tools.rigkit.check --races <race>/<variant>
+python -m tools.rigkit.export_parity
+godot --headless --path . --import
+```
+
 
 ## 5. Migration plan
 
@@ -509,7 +624,7 @@ It exits 1 on any FAIL. Thresholds are one table in `check.py`.
 
 Where the 62 failures are: 40 are `plate_sabaton` (side-view art squashed onto a foot), 9 `dark_robes` (flared hem), 8 `human_undead_male`, 5 other.
 
-Contact sheets for every pack are in `tools/rigkit/out/outfits_01..05.jpg` and `frames_01..04.jpg`.
+Contact sheets for every pack are in `tools/rigkit/out/outfits_01..07.jpg` and `frames_01..06.jpg` (regenerated 2026-11-28: 87 packs, promoted races listed with their `legacy` variant).
 
 **Known problems in the fit itself, not the art.**
 
@@ -532,6 +647,11 @@ python -m tools.rigkit.sheet --out <dir> [--frames]
 python -m tools.rigkit.gen_hands guide|gen|check|install   # the shared fist (section 3.6)
 python -m tools.rigkit.hands_sheet              # hand cases, arm view and zoom, before/after
 python -m tools.rigkit.gen_item list|guide|prompt|gen|check|install|sheet|promote <item>   # worn item repaint (items_td/README.md)
+python -m tools.rigkit.gen_plan guide|gen|check|compare|headsize --race <race>   # race repaint (section 4.3, "Race batch")
+python -m tools.rigkit.install_plan <painting.png> --race <race> --variant tilt15
+python -m tools.rigkit.promote_race <race>      # tilt15 -> default, old default -> legacy
+python -m tools.rigkit.reskin <race> <variant>  # procedural re-skin variant (orc/ashen)
+python -m tools.rigkit.race_sheets before_after|crowd   # review sheets of the race batch
 python -m tools.rigkit.export_parity            # refresh the Godot test fixture
 godot --headless --path . res://tests/rig2_parity_test.tscn
 ```

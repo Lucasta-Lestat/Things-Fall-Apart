@@ -1,0 +1,72 @@
+{
+ "base": "sobruaro_base",
+ "pack": "sobruaro_female/default",
+ "shoulder_half": 0.3,
+ "delt_r": 0.0922,
+ "trunk_depth_n": 0.1445,
+ "chest_depth_s": 0.1879,
+ "belly_depth_s": 0.1695,
+ "belly_half": 0.205,
+ "pec_half": 0.14,
+ "upper_arm_r": [
+  0.0749,
+  0.0613
+ ],
+ "forearm_r": [
+  0.0734,
+  0.049
+ ],
+ "elbow_x": 0.5435,
+ "wrist_x": 0.7757,
+ "palm_rx": 0.0807,
+ "palm_ry": 0.0612,
+ "finger_r": 0.018,
+ "foot_x_tilt": 0.1322,
+ "foot_w": 0.06,
+ "toe_y_tilt": 0.1765,
+ "leg_r": [
+  0.0774,
+  0.0514
+ ],
+ "skin": [
+  52,
+  93,
+  57
+ ],
+ "swatch": {
+  "src": "Rigs/races/sobruaro_female/default/body.png",
+  "box": [
+   661,
+   83,
+   759,
+   188
+  ]
+ },
+ "look": "a female sobruaro, a stocky cactus-folk woman with deep green cactus skin dotted with small clusters of short cream spines, and a round ribbed barrel-cactus head",
+ "torso_tilt": "first the top plane of the chest with the two rounded swells of a full bust side by side, then, tucked under them, a short glimpse of the round belly.",
+ "torso_paint": "the torso as one stocky rounded chest with a full smooth bust and a round belly below it",
+ "arms_paint": "rounded shoulders across the shoulder band; level, smooth, softly rounded arms like cactus limbs",
+ "features": {
+  "bust": {
+   "size": 2.0
+  }
+ },
+ "head_scale": 1.436,
+ "foot": {
+  "kind": "claw",
+  "toes": 3,
+  "toe_len": 0.7,
+  "spread": 0.15,
+  "claw": 0.0
+ },
+ "cap": {
+  "thick": 1.0,
+  "label": "face",
+  "wide": 1.12
+ },
+ "dome": "round barrel-cactus top of the head, its dozen rounded ribs fanning out from the crown like the segments of a pumpkin",
+ "hands_paint": "each hand a thick cactus hand with stubby rounded fingers and a short thumb",
+ "feet_tilt": "At the very bottom the front halves of the two bare feet stand on the floor far below, toes pointing at the bottom of the picture, each a stubby foot front with three short rounded toes side by side.",
+ "feet_paint": "each foot front as a stubby green cactus foot with three short rounded toes",
+ "note": "Small clusters of two or three short cream spines sit sparsely along the ribs of the head and over the shoulders, arms and chest, each one tiny."
+}

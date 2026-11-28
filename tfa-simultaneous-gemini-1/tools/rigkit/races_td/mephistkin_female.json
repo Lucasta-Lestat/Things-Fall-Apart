@@ -1,0 +1,169 @@
+{
+ "base": "mephistkin_base",
+ "pack": "mephistkin_female/default",
+ "shoulder_half": 0.2544,
+ "delt_r": 0.0964,
+ "trunk_depth_n": 0.1513,
+ "chest_depth_s": 0.1958,
+ "belly_depth_s": 0.1763,
+ "belly_half": 0.1896,
+ "pec_half": 0.1218,
+ "upper_arm_r": [
+  0.0792,
+  0.0648
+ ],
+ "forearm_r": [
+  0.0728,
+  0.0485
+ ],
+ "elbow_x": 0.5345,
+ "wrist_x": 0.7798,
+ "palm_rx": 0.0793,
+ "palm_ry": 0.0621,
+ "finger_r": 0.014,
+ "foot_x_tilt": 0.1322,
+ "foot_w": 0.0528,
+ "toe_y_tilt": 0.1814,
+ "leg_r": [
+  0.0799,
+  0.0526
+ ],
+ "skin": [
+  116,
+  32,
+  37
+ ],
+ "cap": {
+  "thick": 1.395,
+  "label": "hair"
+ },
+ "hair": [
+  25,
+  25,
+  30
+ ],
+ "swatch": {
+  "src": "Rigs/races/mephistkin_female/default/body.png",
+  "box": [
+   634,
+   114,
+   784,
+   231
+  ]
+ },
+ "look": "a mephistkin woman, a devil-folk with crimson skin, a very long wild wavy mane of black hair parted down the middle, two dark red-brown ridged horns and a lean build",
+ "dome": "cap of long wild wavy black hair parted down the middle",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as a cap of long wild wavy black hair with soft blue-grey sheen seen from above, parted down the middle, with, in the narrow strip along its bottom edge, a natural mephistkin face strongly foreshortened from above, the hair fringe shading the eyes, a nose tip, closed lips and the front of the chin",
+ "arms_paint": "smooth shoulders and collarbones across the shoulder band; slender level arms with soft, lightly defined muscle",
+ "features": {
+  "hair_long": {
+   "width": 2.4,
+   "depth": 1.2
+  },
+  "horns": {
+   "root": [
+    0.72,
+    0.55,
+    0.75
+   ],
+   "dir": [
+    0.45,
+    -0.85,
+    0.25
+   ],
+   "toward": [
+    1.0,
+    0.0,
+    0.1
+   ],
+   "curl": 65,
+   "len": 2.5,
+   "r": [
+    0.3,
+    0.04
+   ],
+   "guide": "A dark ridged horn grows from each side of the front of the head, beside the face, and sweeps backward and outward over the hair to a fine tip.",
+   "paint": "the two horns as dark red-brown ridged horn"
+  },
+  "bust": {
+   "size": 0.6
+  },
+  "mane_a": {
+   "kind": "rod",
+   "space": "body",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.18,
+    -0.1,
+    1.0
+   ],
+   "b": [
+    0.66,
+    -0.05,
+    0.84
+   ],
+   "r": [
+    0.11,
+    0.02
+   ],
+   "kz": 0.6,
+   "guide": "Behind the body the long hair hangs down the back and flares out to both sides, showing below each upper arm as a wing of loose locks.",
+   "paint": "the hair below the arms as loose wavy locks"
+  },
+  "mane_b": {
+   "kind": "rod",
+   "space": "body",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.2,
+    -0.05,
+    0.95
+   ],
+   "b": [
+    0.52,
+    0.06,
+    0.8
+   ],
+   "r": [
+    0.1,
+    0.02
+   ],
+   "kz": 0.6
+  },
+  "mane_c": {
+   "kind": "rod",
+   "space": "body",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.4,
+    -0.1,
+    0.95
+   ],
+   "b": [
+    0.76,
+    -0.14,
+    0.92
+   ],
+   "r": [
+    0.07,
+    0.015
+   ],
+   "kz": 0.6
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.209 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.39"
+ ],
+ "head_scale": 1.347
+}

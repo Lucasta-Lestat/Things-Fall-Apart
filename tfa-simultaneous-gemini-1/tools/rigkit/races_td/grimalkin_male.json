@@ -1,0 +1,94 @@
+{
+ "base": "grimalkin_base",
+ "pack": "grimalkin_male/default",
+ "delt_r": 0.0986,
+ "trunk_depth_n": 0.1549,
+ "chest_depth_s": 0.2,
+ "belly_depth_s": 0.1799,
+ "belly_half": 0.1923,
+ "pec_half": 0.1234,
+ "upper_arm_r": [
+  0.0815,
+  0.0667
+ ],
+ "forearm_r": [
+  0.0819,
+  0.0546
+ ],
+ "elbow_x": 0.5807,
+ "wrist_x": 0.7618,
+ "palm_rx": 0.0857,
+ "palm_ry": 0.0611,
+ "finger_r": 0.0138,
+ "toe_y_tilt": 0.184,
+ "leg_r": [
+  0.0812,
+  0.0532
+ ],
+ "skin": [
+  204,
+  162,
+  108
+ ],
+ "cap": {
+  "thick": 1.348,
+  "label": "hair"
+ },
+ "hair": [
+  244,
+  196,
+  130
+ ],
+ "swatch": {
+  "src": "Rigs/races/grimalkin_male/default/body.png",
+  "box": [
+   191,
+   174,
+   337,
+   304
+  ]
+ },
+ "look": "a male grimalkin, a lean athletic cat-folk with golden-tan fur dappled with soft smudged brown spots, cream-white fur on the chest and throat, tousled wavy golden-blond hair and large upright ears",
+ "dome": "cap of tousled wavy golden-blond hair",
+ "dome_cover_tilt": "hair",
+ "torso_tilt": "first the top plane of a lean chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one lean chest covered in soft cream-white fur with a flat upper belly below it",
+ "face_paint": "the head as a cap of tousled wavy golden-blond hair seen from above, covering the whole top of the head with its fringe falling forward over the forehead down to the eyes, with, in the narrow strip along its bottom edge, a natural grimalkin cat face strongly foreshortened from above, calm half-lidded cat eyes just under the fringe and a short tan muzzle with a small pink nose and a cream chin",
+ "features": {
+  "ears_up": {
+   "len": 1.6,
+   "r": [
+    0.6,
+    0.05
+   ],
+   "paint": "each ear as a thin upright tan ear with a pink inner hollow and a pale tuft",
+   "root": [
+    0.85,
+    -0.05,
+    0.75
+   ],
+   "dir": [
+    0.8,
+    -0.3,
+    0.6
+   ]
+  },
+  "hair_bushy": {
+   "count": 11,
+   "size": 0.42
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.256 of the half span) is a circle on the hair mass; skull built at 0.190, hair cap x1.35",
+  "depth band widened to 0.330: with the legacy head size the humanoid figure is 0.318 deep (the head, not the camera, sets the depth)"
+ ],
+ "head_scale": 1.716,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.33
+ ],
+ "hands_paint": "each hand as a furred hand with five slim fingers, each finger ending in a short pale claw",
+ "feet_paint": "each paw front with four furred toes, each tipped with a short pale claw"
+}

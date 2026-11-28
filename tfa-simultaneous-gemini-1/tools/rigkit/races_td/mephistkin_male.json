@@ -1,0 +1,510 @@
+{
+ "base": "mephistkin_base",
+ "pack": "mephistkin_male/default",
+ "shoulder_half": 0.2696,
+ "delt_r": 0.1106,
+ "trunk_depth_n": 0.1741,
+ "chest_depth_s": 0.2227,
+ "belly_depth_s": 0.1991,
+ "belly_half": 0.2067,
+ "pec_half": 0.1321,
+ "upper_arm_r": [
+  0.0938,
+  0.0768
+ ],
+ "forearm_r": [
+  0.0786,
+  0.0524
+ ],
+ "elbow_x": 0.5475,
+ "wrist_x": 0.7703,
+ "palm_rx": 0.0827,
+ "palm_ry": 0.066,
+ "finger_r": 0.0149,
+ "foot_x_tilt": 0.1443,
+ "foot_w": 0.0543,
+ "toe_y_tilt": 0.1981,
+ "leg_r": [
+  0.0885,
+  0.0565
+ ],
+ "skin": [
+  100,
+  29,
+  39
+ ],
+ "cap": {
+  "thick": 1.06,
+  "label": "hair"
+ },
+ "hair": [
+  30,
+  29,
+  34
+ ],
+ "swatch": {
+  "src": "Rigs/races/mephistkin_male/default/body.png",
+  "box": [
+   654,
+   116,
+   761,
+   222
+  ]
+ },
+ "look": "a mephistkin man, a devil-folk with deep crimson skin, tousled short black hair, two very large dark brown horns that arc back and sweep out wide, and a broad muscular build",
+ "dome": "cap of tousled short black hair, combed back in thick spiky tufts",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "face_paint": "the head as a cap of tousled short black hair in thick spiky tufts seen from above with, in the narrow strip along its bottom edge, a natural mephistkin face strongly foreshortened from above, calm brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "features": {
+  "horn_00": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.72,
+    0.2,
+    0.3
+   ],
+   "b": [
+    0.795,
+    0.034,
+    0.446
+   ],
+   "r": [
+    0.42,
+    0.418
+   ],
+   "guide": "A very large thick dark horn grows from each temple beside the face, rises and arcs backward over the shoulder, then sweeps far out sideways above the upper arm and ends in a tip that turns toward the top of the picture.",
+   "paint": "the two horns as thick dark brown horn with ring-like growth ridges"
+  },
+  "horn_01": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.795,
+    0.034,
+    0.446
+   ],
+   "b": [
+    0.865,
+    -0.134,
+    0.597
+   ],
+   "r": [
+    0.418,
+    0.414
+   ]
+  },
+  "horn_02": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.865,
+    -0.134,
+    0.597
+   ],
+   "b": [
+    0.945,
+    -0.298,
+    0.737
+   ],
+   "r": [
+    0.414,
+    0.407
+   ]
+  },
+  "horn_03": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    0.945,
+    -0.298,
+    0.737
+   ],
+   "b": [
+    1.05,
+    -0.45,
+    0.85
+   ],
+   "r": [
+    0.407,
+    0.398
+   ]
+  },
+  "horn_04": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.05,
+    -0.45,
+    0.85
+   ],
+   "b": [
+    1.188,
+    -0.597,
+    0.932
+   ],
+   "r": [
+    0.398,
+    0.386
+   ]
+  },
+  "horn_05": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.188,
+    -0.597,
+    0.932
+   ],
+   "b": [
+    1.349,
+    -0.741,
+    0.991
+   ],
+   "r": [
+    0.386,
+    0.373
+   ]
+  },
+  "horn_06": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.349,
+    -0.741,
+    0.991
+   ],
+   "b": [
+    1.523,
+    -0.864,
+    1.029
+   ],
+   "r": [
+    0.373,
+    0.357
+   ]
+  },
+  "horn_07": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.523,
+    -0.864,
+    1.029
+   ],
+   "b": [
+    1.7,
+    -0.95,
+    1.05
+   ],
+   "r": [
+    0.357,
+    0.342
+   ]
+  },
+  "horn_08": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.7,
+    -0.95,
+    1.05
+   ],
+   "b": [
+    1.884,
+    -0.98,
+    1.043
+   ],
+   "r": [
+    0.342,
+    0.325
+   ]
+  },
+  "horn_09": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    1.884,
+    -0.98,
+    1.043
+   ],
+   "b": [
+    2.078,
+    -0.969,
+    1.009
+   ],
+   "r": [
+    0.325,
+    0.306
+   ]
+  },
+  "horn_10": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.078,
+    -0.969,
+    1.009
+   ],
+   "b": [
+    2.271,
+    -0.948,
+    0.971
+   ],
+   "r": [
+    0.306,
+    0.286
+   ]
+  },
+  "horn_11": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.271,
+    -0.948,
+    0.971
+   ],
+   "b": [
+    2.45,
+    -0.95,
+    0.95
+   ],
+   "r": [
+    0.286,
+    0.265
+   ]
+  },
+  "horn_12": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.45,
+    -0.95,
+    0.95
+   ],
+   "b": [
+    2.614,
+    -0.975,
+    0.947
+   ],
+   "r": [
+    0.265,
+    0.246
+   ]
+  },
+  "horn_13": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.614,
+    -0.975,
+    0.947
+   ],
+   "b": [
+    2.769,
+    -1.009,
+    0.953
+   ],
+   "r": [
+    0.246,
+    0.226
+   ]
+  },
+  "horn_14": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.769,
+    -1.009,
+    0.953
+   ],
+   "b": [
+    2.914,
+    -1.064,
+    0.97
+   ],
+   "r": [
+    0.226,
+    0.205
+   ]
+  },
+  "horn_15": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    2.914,
+    -1.064,
+    0.97
+   ],
+   "b": [
+    3.05,
+    -1.15,
+    1.0
+   ],
+   "r": [
+    0.205,
+    0.182
+   ]
+  },
+  "horn_16": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    3.05,
+    -1.15,
+    1.0
+   ],
+   "b": [
+    3.173,
+    -1.281,
+    1.048
+   ],
+   "r": [
+    0.182,
+    0.155
+   ]
+  },
+  "horn_17": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    3.173,
+    -1.281,
+    1.048
+   ],
+   "b": [
+    3.284,
+    -1.447,
+    1.113
+   ],
+   "r": [
+    0.155,
+    0.123
+   ]
+  },
+  "horn_18": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    3.284,
+    -1.447,
+    1.113
+   ],
+   "b": [
+    3.391,
+    -1.627,
+    1.183
+   ],
+   "r": [
+    0.123,
+    0.087
+   ]
+  },
+  "horn_19": {
+   "kind": "rod",
+   "space": "head",
+   "label": "face",
+   "colour": "horn",
+   "core": false,
+   "mirror": true,
+   "a": [
+    3.391,
+    -1.627,
+    1.183
+   ],
+   "b": [
+    3.5,
+    -1.8,
+    1.25
+   ],
+   "r": [
+    0.087,
+    0.05
+   ]
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.145 of the half span) is a circle on the hair mass; skull built at 0.137, hair cap x1.06",
+  "horns: hand-built S-curve of 20 mirrored rods (horn_00..horn_19, generated from a Catmull-Rom spline) because the legacy horns rise from the temples, arc back, sweep out wide and upturn at the tip; one arc cannot do that. Tip-to-tip is about 0.48 of the span as in the legacy painting."
+ ],
+ "head_scale": 1.245,
+ "head_pivot_z": 1.7,
+ "head_back": -0.012
+}

@@ -1,0 +1,59 @@
+{
+ "abstract": true,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2494,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.17,
+ "toe_y_tilt": 0.2146,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "head_z": 1.76,
+ "tusk_x_tilt": 0.046,
+ "dome_cover_tilt": "hair",
+ "skin_words": "ruddy tan skin, its lighter highlights",
+ "line_words": "crisp, dark red-brown contour line",
+ "face_tilt": "the fringe of the hair, right under it the brow shading the eye sockets into two dark slits, then the bridge and tip of the nose, and just behind the nose the lips and the front of the chin. Brow, nose tip and chin sit close together, squeezed by the steep view, and the chin is the bottom edge of the head, with the chest starting directly below it.",
+ "torso_tilt": "first the top plane of a deep barrel chest, then, below the chest, the top of a firm round belly.",
+ "torso_paint": "the torso as one deep barrel chest with a firm round belly below it",
+ "arms_paint": "thick rounded shoulders across the shoulder band; short strong level arms",
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.309
+ ]
+}

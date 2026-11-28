@@ -1,0 +1,68 @@
+{
+ "shoulder_half": 0.3,
+ "delt_r": 0.105,
+ "trunk_depth_n": 0.165,
+ "chest_depth_s": 0.212,
+ "belly_depth_s": 0.19,
+ "belly_half": 0.2,
+ "pec_half": 0.128,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.025,
+ "tusk_x": 0.052,
+ "ear_len": 0.062,
+ "upper_arm_r": [
+  0.088,
+  0.072
+ ],
+ "forearm_r": [
+  0.08,
+  0.053
+ ],
+ "elbow_x": 0.585,
+ "wrist_x": 0.805,
+ "palm_rx": 0.07,
+ "palm_ry": 0.064,
+ "finger_r": 0.0145,
+ "foot_x": 0.128,
+ "toe_y": 0.238,
+ "toe_r": 0.023,
+ "foot_x_tilt": 0.15,
+ "foot_w": 0.066,
+ "toe_y_tilt": 0.188,
+ "tusk_x_tilt": 0.046,
+ "head_scale": 1.362,
+ "head_back": -0.012,
+ "head_pivot_z": 1.7,
+ "skin": [
+  118,
+  136,
+  70
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "swatch": {
+  "src": "Rigs/races/orc/default/body.png",
+  "box": [
+   630,
+   20,
+   810,
+   170
+  ]
+ },
+ "look": "an orc with olive-green skin, a bald scalp, pointed ears, heavy muscles and ivory tusk tips",
+ "head_extras": "Two small ivory tusk points touch the outside of the dome's lower rim, set well apart, each one a separate little cone lying on plain smooth chest skin. A pointed ear sticks out sideways from each side of the dome.",
+ "skin_words": "fresh saturated olive-green hue, its lighter yellow-green highlights",
+ "line_words": "heavy, crisp, near-black green contour line",
+ "face_tilt": "a heavy brow ridge whose overhang shades the eye sockets into two dark slits, right under it the broad tip of the nose, and just behind the nose the front of the jaw with one small ivory tusk rising from each corner of the lower lip. Brow, nose tip and tusks sit close together, squeezed by the steep view, and the tusks and lower lip are the bottom edge of the head, with the chest starting directly below them. A pointed ear sticks out sideways from each side of the head.",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "face_paint": "the head as a big bald scalp with, in the narrow strip along its bottom edge, a natural orc face strongly foreshortened from above, a scowling brow over shadowed eye slits, a broad nose tip and the front of a heavy jaw with its two small tusks",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them"
+}

@@ -1,0 +1,290 @@
+{
+ "base": "goblin",
+ "pack": "goblin_female/default",
+ "features": {
+  "ear_hollow": {
+   "kind": "rod",
+   "space": "head",
+   "a": [
+    1.116,
+    -0.055,
+    -0.041
+   ],
+   "b": [
+    1.953,
+    -0.74,
+    0.279
+   ],
+   "r": [
+    0.289,
+    0.09
+   ],
+   "kz": 0.6,
+   "mirror": true,
+   "colour": "earhollow",
+   "label": "face"
+  },
+  "nose_tan": {
+   "kind": "rod",
+   "space": "head",
+   "a": [
+    0.0,
+    1.069,
+    -0.213
+   ],
+   "b": [
+    0,
+    1.315,
+    -0.543
+   ],
+   "r": [
+    0.11,
+    0.15
+   ],
+   "colour": "nose",
+   "label": "face"
+  },
+  "wart1": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    -0.42,
+    -0.62,
+    0.686
+   ],
+   "r": [
+    0.055,
+    0.06875,
+    0.033
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart2": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.33,
+    -0.72,
+    0.656
+   ],
+   "r": [
+    0.048,
+    0.06,
+    0.0288
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart3": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.62,
+    -0.3,
+    0.709
+   ],
+   "r": [
+    0.06,
+    0.075,
+    0.036
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart4": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    -0.68,
+    -0.18,
+    0.689
+   ],
+   "r": [
+    0.045,
+    0.056249999999999994,
+    0.027
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart5": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    -0.12,
+    -0.34,
+    0.909
+   ],
+   "r": [
+    0.05,
+    0.0625,
+    0.03
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart6": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.2,
+    -0.02,
+    0.944
+   ],
+   "r": [
+    0.042,
+    0.052500000000000005,
+    0.0252
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart7": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    -0.38,
+    0.18,
+    0.878
+   ],
+   "r": [
+    0.052,
+    0.065,
+    0.0312
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart8": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.5,
+    0.22,
+    0.812
+   ],
+   "r": [
+    0.046,
+    0.057499999999999996,
+    0.0276
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart9": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.02,
+    -0.86,
+    0.601
+   ],
+   "r": [
+    0.044,
+    0.05499999999999999,
+    0.026399999999999996
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart10": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    -0.74,
+    -0.52,
+    0.461
+   ],
+   "r": [
+    0.04,
+    0.05,
+    0.024
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart11": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.76,
+    -0.62,
+    0.312
+   ],
+   "r": [
+    0.045,
+    0.056249999999999994,
+    0.027
+   ],
+   "colour": "wart",
+   "label": "face"
+  },
+  "wart12": {
+   "kind": "blob",
+   "space": "head",
+   "at": [
+    0.1,
+    0.36,
+    0.906
+   ],
+   "r": [
+    0.04,
+    0.05,
+    0.024
+   ],
+   "colour": "wart",
+   "label": "face"
+  }
+ },
+ "look": "a small female goblin with moss-green skin, a big bald warty head, very large pointed ears, a long pointed tan-brown nose and a slight wiry body with thin sinewy arms",
+ "skin": [
+  118,
+  132,
+  66
+ ],
+ "swatch": {
+  "src": "Rigs/races/goblin_female/default/body.png",
+  "box": [
+   654,
+   129,
+   733,
+   201
+  ]
+ },
+ "head_scale": 1.371,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "skin_words": "muted moss-green hue, its dry chalky surface",
+ "line_words": "thin, crisp, dark green contour line",
+ "arms_paint": "narrow slim shoulders across the shoulder band; level thin sinewy arms with a slight elbow and a slender forearm, in the same dry matte mid-tone skin with soft-edged low-contrast modelling",
+ "hands_paint": "each hand with five long thin fingers, soft matte knuckles and short fingernails",
+ "face_paint": "the head as a big bald scalp of dry, chalky, matte moss-green skin in one even mid-tone, modelled with soft low-contrast brushwork and speckled with the same small darker green warts the sculpt shows, with, in the narrow strip along its bottom edge, a natural goblin woman's face strongly foreshortened from above, a sly scowling brow over shadowed eye slits, a long pointed nose in dull tan-brown exactly where the sculpt's nose is tan, and a narrow jaw with its two tiny fangs; each big ear a broad leaf of green skin with a wide dull pink-brown inner hollow exactly where the sculpt is pink-brown",
+ "torso_paint": "the torso as one narrow slight chest with a soft flat breastbone and a small round belly below it",
+ "notes": "painter: female = slimmer wording, moss-green sampled from legacy scalp. Corrective pass: tan nose, pink-brown ear hollows and scalp warts are carried by guide features (colours nose / earhollow / wart); ears raised to about 40 degrees with a broader blade; gen runs use a --text-file whose swatch sentence asks for soft matte close mid-tones (the shared sentence asks for a highlight on the scalp, which gave gloss)",
+ "ear_len": 0.175,
+ "ear_tilt": [
+  0.07,
+  0.138,
+  0.05
+ ],
+ "colours": {
+  "nose": [
+   176,
+   150,
+   98
+  ],
+  "earhollow": [
+   156,
+   112,
+   88
+  ],
+  "wart": [
+   88,
+   102,
+   46
+  ]
+ },
+ "dome": "bald scalp dotted with small darker green warts",
+ "finish": "dry chalky matte skin with a soft diffuse painterly surface"
+}

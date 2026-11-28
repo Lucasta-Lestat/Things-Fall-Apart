@@ -1,0 +1,69 @@
+{
+ "abstract": true,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "foot": {
+  "kind": "claw",
+  "toes": 3
+ },
+ "dome": "round feathered top of the head",
+ "dome_cover_tilt": "head",
+ "skin_words": "pale grey-white feathers, its lighter highlights",
+ "line_words": "crisp, dark slate-grey contour line",
+ "face_tilt": "a feathered brow over two dark eyes and between them a short hooked beak that points down and forward. Brow, eyes and beak sit close together, squeezed by the steep view, and the tip of the beak is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a round feathered top of the head seen from above with, in the narrow strip along its bottom edge, a natural goluna face strongly foreshortened from above, a feathered brow over two dark eyes and a short hooked grey beak",
+ "arms_paint": "the shoulder band and the level arms covered in soft layered feathers",
+ "hands_paint": "each hand with five feathered fingers",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with three long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with three long toes ending in short dark claws",
+ "swatch_of": "feathers",
+ "finish": "matte soft feathers",
+ "colours": {
+  "beak": [
+   150,
+   150,
+   140
+  ],
+  "wing": [
+   196,
+   204,
+   204
+  ]
+ },
+ "features": {
+  "beak": {},
+  "ruff": {
+   "kind": "ring",
+   "count": 12,
+   "radius": 1.0,
+   "size": 0.26,
+   "z": 0.0,
+   "arc": [
+    40,
+    320
+   ]
+  }
+ },
+ "head_pivot_z": 1.8,
+ "head_back": -0.03
+}

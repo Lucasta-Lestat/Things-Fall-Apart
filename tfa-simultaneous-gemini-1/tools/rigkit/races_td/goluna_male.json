@@ -1,0 +1,641 @@
+{
+ "base": "goluna_base",
+ "pack": "goluna_male/default",
+ "shoulder_half": 0.36,
+ "delt_r": 0.097,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2066,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "upper_arm_r": [
+  0.098,
+  0.088
+ ],
+ "elbow_x": 0.5636,
+ "wrist_x": 0.76,
+ "palm_rx": 0.088,
+ "palm_ry": 0.078,
+ "finger_r": 0.0225,
+ "foot_x_tilt": 0.1417,
+ "foot_w": 0.0649,
+ "toe_y_tilt": 0.2035,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "skin": [
+  186,
+  191,
+  184
+ ],
+ "swatch": {
+  "src": "Rigs/races/goluna_male/default/body.png",
+  "box": [
+   678,
+   137,
+   814,
+   274
+  ]
+ },
+ "look": "a male goluna, a broad, heavy, soft owl-like bird-folk wearing one continuous fluffy coat of short pale grey-white feathers, with a round feathered head, a short hooked beak tip, thick feathered arms and two folded grey-teal wings on its back",
+ "torso_tilt": "first the top plane of the broad rounded chest, one soft mass, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad soft rounded mass of fluffy chest plumage, short overlapping feathers in even rows",
+ "features": {
+  "ruff": null,
+  "beak": {
+   "len": 0.5,
+   "r": [
+    0.3,
+    0.06
+   ],
+   "droop": 0.75
+  },
+  "chest_mass": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "at": [
+    0,
+    0.1094,
+    1.385
+   ],
+   "r": [
+    0.31,
+    0.125,
+    0.135
+   ]
+  },
+  "tuft_n_l0": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "at": [
+    -0.44,
+    -0.098046875,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.0238,
+    0.02
+   ]
+  },
+  "tuft_n_l1": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "at": [
+    -0.5,
+    -0.094140625,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.0238,
+    0.02
+   ]
+  },
+  "tuft_n_l2": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "at": [
+    -0.56,
+    -0.09023437499999999,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_l3": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.615,
+    -0.08476578411405296,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_l4": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.67,
+    -0.07916496945010183,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_l5": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.725,
+    -0.07356415478615072,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_s_l6": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "at": [
+    -0.47,
+    0.09409375,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_l7": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_l",
+   "at": [
+    -0.53,
+    0.09018749999999999,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_l8": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.59,
+    0.08531160896130346,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_l9": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.65,
+    0.07920162932790224,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_l10": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_l",
+   "at": [
+    -0.71,
+    0.07309164969450102,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_n_r11": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "at": [
+    0.44,
+    -0.098046875,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.0238,
+    0.02
+   ]
+  },
+  "tuft_n_r12": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "at": [
+    0.5,
+    -0.094140625,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.0238,
+    0.02
+   ]
+  },
+  "tuft_n_r13": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "at": [
+    0.56,
+    -0.09023437499999999,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_r14": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.615,
+    -0.08476578411405296,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_r15": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.67,
+    -0.07916496945010183,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_n_r16": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.725,
+    -0.07356415478615072,
+    1.555
+   ],
+   "r": [
+    0.038,
+    0.034,
+    0.02
+   ]
+  },
+  "tuft_s_r17": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "at": [
+    0.47,
+    0.09409375,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_r18": {
+   "kind": "blob",
+   "space": "body",
+   "label": "upperarm_r",
+   "at": [
+    0.53,
+    0.09018749999999999,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_r19": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.59,
+    0.08531160896130346,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_r20": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.65,
+    0.07920162932790224,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "tuft_s_r21": {
+   "kind": "blob",
+   "space": "body",
+   "label": "forearm_r",
+   "at": [
+    0.71,
+    0.07309164969450102,
+    1.55
+   ],
+   "r": [
+    0.036,
+    0.018,
+    0.02
+   ]
+  },
+  "mantle": {
+   "kind": "blob",
+   "space": "body",
+   "label": "body",
+   "at": [
+    0,
+    -0.02,
+    1.5
+   ],
+   "r": [
+    0.38,
+    0.125,
+    0.12
+   ]
+  },
+  "wing_lead": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "skin",
+   "a": [
+    0.1,
+    -0.28,
+    1.42
+   ],
+   "b": [
+    0.25,
+    -0.33,
+    1.42
+   ],
+   "r": [
+    0.04,
+    0.04
+   ],
+   "kz": 0.6,
+   "guide": "Behind each shoulder a folded wing rises from the upper back, a pale fluffy ridge along its top with a row of darker grey-teal flight feathers hanging under it, and between the two wings a narrow fan of darker tail feathers shows behind the head.",
+   "paint": "each folded wing as a pale fluffy top ridge over a row of darker grey-teal flight feathers, and the tail as a narrow fan of darker grey-teal feathers"
+  },
+  "wing_lead2": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "skin",
+   "a": [
+    0.25,
+    -0.33,
+    1.42
+   ],
+   "b": [
+    0.39,
+    -0.27,
+    1.4
+   ],
+   "r": [
+    0.04,
+    0.034
+   ],
+   "kz": 0.6
+  },
+  "wing_dark_0": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "wing",
+   "a": [
+    0.13,
+    -0.3,
+    1.36
+   ],
+   "b": [
+    0.165,
+    -0.13,
+    1.36
+   ],
+   "r": [
+    0.046,
+    0.036
+   ],
+   "kz": 0.3
+  },
+  "wing_dark_1": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "wing",
+   "a": [
+    0.2,
+    -0.3,
+    1.36
+   ],
+   "b": [
+    0.23500000000000001,
+    -0.13,
+    1.36
+   ],
+   "r": [
+    0.046,
+    0.036
+   ],
+   "kz": 0.3
+  },
+  "wing_dark_2": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "wing",
+   "a": [
+    0.27,
+    -0.3,
+    1.36
+   ],
+   "b": [
+    0.30500000000000005,
+    -0.13,
+    1.36
+   ],
+   "r": [
+    0.046,
+    0.036
+   ],
+   "kz": 0.3
+  },
+  "wing_dark_3": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "wing",
+   "a": [
+    0.34,
+    -0.3,
+    1.36
+   ],
+   "b": [
+    0.375,
+    -0.13,
+    1.36
+   ],
+   "r": [
+    0.046,
+    0.036
+   ],
+   "kz": 0.3
+  },
+  "tail_c": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": false,
+   "colour": "tailfan",
+   "a": [
+    0,
+    -0.2,
+    1.1
+   ],
+   "b": [
+    0,
+    -0.43,
+    1.05
+   ],
+   "r": [
+    0.04,
+    0.036
+   ],
+   "kz": 0.3
+  },
+  "tail_s": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "mirror": true,
+   "colour": "tailfan",
+   "a": [
+    0.02,
+    -0.2,
+    1.1
+   ],
+   "b": [
+    0.07,
+    -0.41,
+    1.05
+   ],
+   "r": [
+    0.04,
+    0.034
+   ],
+   "kz": 0.3
+  }
+ },
+ "head_scale": 1.253,
+ "depth_band": [
+  0.22,
+  0.315
+ ],
+ "notes": [
+  "depth band widened to 0.315: with the legacy head size the humanoid figure is 0.303 deep (the head, not the camera, sets the depth)"
+ ],
+ "foot": {
+  "kind": "claw",
+  "toes": 3,
+  "toe_len": 0.7,
+  "spread": 0.3,
+  "claw": 0.5
+ },
+ "hands_paint": "each hand as a broad soft hand coated in the same pale feathers, with five thick feathered fingers with rounded tips",
+ "arms_paint": "the shoulder band and the level arms as thick soft rounded sleeves of fluffy plumage, short overlapping pale feathers in rows, with small feather tufts breaking their edges",
+ "note": "One continuous coat of soft, short, overlapping pale grey-white feathers covers the head, shoulders, arms, hands and chest, each feather a small rounded soft-edged mark, giving the whole figure a soft fluffy silhouette and even chalky matte shading like the swatch.",
+ "forearm_r": [
+  0.088,
+  0.068
+ ],
+ "normal_blur": 5.0,
+ "colours": {
+  "wing": [
+   124,
+   137,
+   138
+  ],
+  "tailfan": [
+   146,
+   158,
+   157
+  ]
+ },
+ "face_tilt": "a soft feathered brow over two small dark eyes and between them a short hooked beak tip that points down. Brow, eyes and beak sit close together, squeezed by the steep view, and the tip of the beak is the bottom edge of the head, with the chest starting directly below it.",
+ "face_paint": "the head as a round fluffy feathered top of the head seen from above with, in the narrow strip along its bottom edge, a calm goluna face strongly foreshortened from above, a soft feathered brow over two small round dark eyes and a short hooked grey beak tip",
+ "feet_tilt": "At the very bottom the front ends of the two feet stand on the floor far below, each a short foot front with three short thick toes side by side that end in small claw tips, the two feet alike.",
+ "feet_paint": "each foot front as three short thick grey toes with small dark claw tips, the two feet mirror images",
+ "finish": "chalky matte plumage with even soft shading"
+}

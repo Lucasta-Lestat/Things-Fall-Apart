@@ -1,0 +1,131 @@
+{
+ "pack": "elf/default",
+ "shoulder_half": 0.295,
+ "delt_r": 0.085,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.205,
+ "belly_depth_s": 0.195,
+ "belly_half": 0.18,
+ "pec_half": 0.12,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.15,
+ "upper_arm_r": [
+  0.086,
+  0.073
+ ],
+ "forearm_r": [
+  0.071,
+  0.047
+ ],
+ "elbow_x": 0.53,
+ "wrist_x": 0.7756,
+ "palm_rx": 0.0808,
+ "palm_ry": 0.058,
+ "finger_r": 0.0131,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.1239,
+ "foot_w": 0.0521,
+ "toe_y_tilt": 0.2035,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "skin": [
+  217,
+  170,
+  139
+ ],
+ "cap": {
+  "thick": 1.55,
+  "label": "hair",
+  "fwd": -0.25,
+  "deep": 1.0,
+  "up": 0.15,
+  "tall": 0.6,
+  "wide": 1.05
+ },
+ "hair": [
+  238,
+  203,
+  143
+ ],
+ "tusk_x_tilt": 0.046,
+ "ear_tilt": [
+  0.026,
+  0.1,
+  0.03
+ ],
+ "swatch": {
+  "src": "Rigs/races/elf/default/body.png",
+  "box": [
+   105,
+   188,
+   225,
+   268
+  ]
+ },
+ "look": "a young elf man with fair skin, a thick tousled mop of pale golden blond hair, long pointed ears and a slender, lean build with narrow shoulders and long thin arms",
+ "dome": "thick tousled mop of pale golden blond hair, wider than the skull, with soft locks all round its uneven edge",
+ "dome_cover_tilt": "hair",
+ "skin_words": "fair skin, its gentle lighter tints",
+ "line_words": "crisp, dark brown contour line",
+ "face_tilt": "the long fringe of the hair hanging over the brow and the eyes, and under the fringe only the tip of the nose and the small front of the chin peeking out. The chin is the bottom edge of the head, with the chest starting directly below it. A long pointed ear sticks out sideways from under the hair on each side of the head.",
+ "torso_tilt": "first the top plane of a slim narrow chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth narrow chest with a flat upper belly below it",
+ "face_paint": "the head as a thick tousled mop of pale golden blond hair seen from above, many fine bright strands in soft wavy locks swept out from the crown, the fringe falling over the brow, with the small nose tip and chin in fair skin just under the fringe",
+ "arms_paint": "small smooth narrow shoulders and fine collarbones across the shoulder band; long thin level arms, smooth and slender from shoulder to wrist",
+ "features": {
+  "hair_bushy": {
+   "count": 10,
+   "size": 0.52,
+   "radius": 1.5,
+   "arc": [
+    55,
+    305
+   ],
+   "z": 0.2,
+   "core": false
+  },
+  "fringe": {
+   "kind": "hair_bushy",
+   "count": 4,
+   "size": 0.45,
+   "radius": 1.25,
+   "arc": [
+    -42,
+    42
+   ],
+   "z": 0.35,
+   "core": false
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.207 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.38",
+  "depth band widened to 0.316: with the legacy head size the humanoid figure is 0.304 deep (the head, not the camera, sets the depth)"
+ ],
+ "head_scale": 1.165,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.316
+ ],
+ "face_fwd": 0.055,
+ "hands_paint": "each hand slender with five well-formed fingers and short fingernails",
+ "finish": "flat matte skin with small soft shading under even diffuse light",
+ "note": "The hair is pale golden blond, light and bright like straw in sunlight, with thin crisp dark golden-brown lines between the locks. The whole figure is slim and youthful, with flat matte skin in even diffuse light."
+}

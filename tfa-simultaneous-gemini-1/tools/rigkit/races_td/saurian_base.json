@@ -1,0 +1,68 @@
+{
+ "abstract": true,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2066,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.0,
+ "tusk_x": 0.05,
+ "ear_len": 0.0,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "toe_y_tilt": 0.2035,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "tusk_x_tilt": 0.046,
+ "foot": {
+  "kind": "claw",
+  "toes": 3
+ },
+ "dome": "scaled top of the skull",
+ "dome_cover_tilt": "skull",
+ "line_words": "crisp, near-black olive contour line",
+ "face_tilt": "a brow ridge that shades the eyes into two dark slits, and in front of it a long reptile snout that juts forward to a blunt tip with two nostrils on top. Brow and snout sit close together, squeezed by the steep view, and the tip of the snout is the bottom edge of the head, with the chest starting directly below it.",
+ "torso_tilt": "first the top plane of the broad chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the upper belly.",
+ "torso_paint": "the torso as one broad chest with two full pectoral muscles and a firm upper belly below them",
+ "face_paint": "the head as a scaled top of the skull seen from above with, in the narrow strip along its bottom edge, a natural saurian face strongly foreshortened from above, a scaled brow over shadowed eyes and a long blunt reptile snout with two nostrils",
+ "arms_paint": "the shoulder band and the level arms covered in small overlapping scales over firm muscle",
+ "hands_paint": "each hand with five well-formed fingers that end in short dark claws",
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad foot front with three long toes that fan out and end in claws.",
+ "feet_paint": "each foot front with three long toes ending in short dark claws",
+ "swatch_of": "scaled skin",
+ "finish": "matte scaled skin",
+ "features": {
+  "snout": {
+   "len": 1.25,
+   "r": [
+    0.52,
+    0.36
+   ]
+  }
+ },
+ "head_pivot_z": 1.8,
+ "head_back": -0.03
+}

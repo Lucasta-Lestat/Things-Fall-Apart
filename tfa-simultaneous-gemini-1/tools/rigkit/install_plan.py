@@ -2,7 +2,8 @@
 
     python -m tools.rigkit.install_plan <painting.png> --race orc --variant tilt15
         [--guide PREFIX]            default: the painting's own tag, "<tag>_<i>.png" -> "<tag>.guide"
-        [--match orc/default]       pack whose in-game size the new pack must have
+        [--match orc/legacy]        pack whose in-game size the new pack must have (default: <race>/legacy
+                                    when it exists, else <race>/default)
         [--match-by span]           span | shoulders | head | arm   (see MEASURES)
         [--world-scale X]           skip the match and set it
         [--keep-legs] [--keep-shoulder-cut] [--no-head-snap] [--debug DIR]
@@ -58,14 +59,20 @@ PACK_MARGIN = 9           # px of clear canvas around the silhouette, as in the 
 NAMES = [None] + list(PALETTE)          # label index 0 = background
 RGB = np.array([(0, 0, 0)] + [PALETTE[n] for n in PALETTE], np.uint8)
 IDX = {n: i for i, n in enumerate(NAMES)}
+SHADOW_REACH = 6          # px the contact-shadow peel may reach inside the guide's silhouette
 HEAD_BAND = 0.55          # head snap: search this share of the skull radius either side of the guide's edge
 
 
 # ---------------------------------------------------------------- key
 
-def key(rgb):
+def key(rgb, gmask=None):
     """rgb: HxWx3 uint8 painting on flat grey. Returns (rgb float HxWx3 with the ground
-    replaced by bled paint, alpha float HxW in 0..1, info)."""
+    replaced by bled paint, alpha float HxW in 0..1, info).
+
+    gmask: the guide's silhouette, when there is one. It makes the key safe for pale grey paint
+    (white feathers, silver hair, ashen skin), which is as grey as the ground: paint enclosed by the
+    contour line is kept wherever the guide has figure, and the contact-shadow peel never reaches
+    more than SHADOW_REACH px inside the guide's silhouette."""
     a = rgb.astype(np.float32)
     k = 24
     corners = np.concatenate([a[:k, :k].reshape(-1, 3), a[:k, -k:].reshape(-1, 3),
@@ -75,6 +82,9 @@ def key(rgb):
     chroma = a.max(-1) - a.min(-1)
     lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
     fg = (chroma > 14) | (d > 45)
+    if gmask is not None:
+        # grey paint inside a contour: fill what the line encloses BEFORE the opening can break a thin line
+        fg = fg | (ndi.binary_fill_holes(ndi.binary_closing(fg, iterations=1)) & gmask)
     fg = ndi.binary_opening(fg, iterations=1)
     lab, n = ndi.label(fg)
     if not n:
@@ -82,16 +92,19 @@ def key(rgb):
     fg = lab == (1 + int(np.argmax(ndi.sum(fg, lab, range(1, n + 1)))))
     closed = ndi.binary_closing(fg, iterations=2)
     filled = ndi.binary_fill_holes(closed)
-    # an enclosed patch of plain ground (between an arm and the trunk, say) stays a hole
+    # an enclosed patch of plain ground (between an arm and the trunk, say) stays a hole,
+    # unless the guide has figure there (then it is grey paint)
     holes, hn = ndi.label(filled & ~closed)
     for i in range(1, hn + 1):
         m = holes == i
-        if m.sum() >= 40 and float(d[m].mean()) < 12:
+        if m.sum() >= 40 and float(d[m].mean()) < 12 and (gmask is None or float(gmask[m].mean()) < 0.5):
             filled &= ~m
     fg = filled
     # contact shadow: grey (no chroma), lighter than the contour line, and connected to
     # the ground. Peeling stops at the dark outline, so paint is never eaten.
     shadowlike = fg & (chroma < 12) & (lum > 72) & (lum < float(bg.mean()) + 6)
+    if gmask is not None:
+        shadowlike &= ~ndi.binary_erosion(gmask, iterations=SHADOW_REACH)
     seed = ndi.binary_dilation(~fg, iterations=1) & shadowlike
     shadow = ndi.binary_propagation(seed, mask=shadowlike)
     fg &= ~shadow
@@ -188,7 +201,13 @@ def snap_head(idx, rgb, alpha, skull_r, notes):
     img = cv2.GaussianBlur(np.clip(rgb, 0, 255).astype(np.uint8), (0, 0), 1.2)
     cv2.watershed(img, markers)
     won = (markers == 3) | ((markers == -1) & ndi.binary_dilation(markers == 3, iterations=1))
-    new_head = ndi.binary_fill_holes(ndi.binary_opening(won, iterations=1) | sure_head) & fg
+    new_head = (ndi.binary_opening(won, iterations=1) | sure_head) & fg
+    # close pinholes only: trunk seen through a horn's curl or between a lock and the neck stays trunk
+    gaps, gn = ndi.label(ndi.binary_fill_holes(new_head) & ~new_head)
+    for i in range(1, gn + 1):
+        g = gaps == i
+        if int(g.sum()) < 0.02 * float(head.sum()) or not (trunk & g).any():
+            new_head |= g & fg
     # guard: a watershed that leaks down the chest is worse than the guide's own cut
     grow = float(new_head.sum()) / max(float(head.sum()), 1.0)
     if not (0.8 <= grow <= 1.6):
@@ -202,13 +221,25 @@ def snap_head(idx, rgb, alpha, skull_r, notes):
     return out
 
 
+TIDY_FREE = ("over_garment", "hair", "face")   # labels that are honestly several blobs
+
+
 def tidy(idx, min_keep=0.25):
-    """A label is one blob: stray islands of a label go to the label around them."""
+    """A label is one blob: stray islands of a label go to the label around them. Not for
+    over-garment anatomy (a tail shows on both sides of the trunk, wings come in pairs), nor for the
+    head's labels (locks, braids, horns and ears stand apart from the skull); those only lose specks."""
     out = idx.copy()
     for i in np.unique(idx):
         if i == 0:
             continue
         lab, n = ndi.label(idx == i)
+        if NAMES[i] in TIDY_FREE:
+            if n > 1:
+                sizes = ndi.sum(idx == i, lab, range(1, n + 1))
+                for j, sz in enumerate(sizes, 1):
+                    if sz < 30:
+                        out[lab == j] = -1
+            continue
         if n <= 1:
             continue
         sizes = ndi.sum(idx == i, lab, range(1, n + 1))
@@ -224,6 +255,37 @@ def tidy(idx, min_keep=0.25):
         fill = tmp[iy, ix]
         out[hole] = fill[hole]
     return out
+
+
+def shoulder_pins(lab, frames, notes, reach=6, tol=1.5):
+    """derive.py finds the shoulder seam where the upper arm touches the trunk OR over-garment
+    anatomy. A tail or a wing that passes behind an upper arm in the picture drags that seam (and
+    with it the torso frame every garment hangs on) toward itself. When that happens the torso, back
+    and upper-arm frames are measured again with the over-garment pixels near the arms left out, and
+    pinned, so build_race keeps them. Returns {frame name: frame} (empty when nothing touches)."""
+    og = np.abs(lab.astype(np.int32) - np.array(PALETTE["over_garment"], np.int32)).sum(2) <= 40
+    if not og.any():
+        return {}
+    arms = np.zeros(og.shape, bool)
+    for s in "lr":
+        arms |= np.abs(lab.astype(np.int32) - np.array(PALETTE["upperarm_" + s], np.int32)).sum(2) <= 40
+    near = og & ndi.binary_dilation(arms, iterations=reach)
+    if not near.any():
+        return {}
+    clean = lab.copy()
+    clean[near] = 0
+    try:
+        f2, _ = derive_frames(clean, 1.0)
+    except Exception as e:                       # the arm hangs on the over-garment form alone: keep derive's answer
+        notes.append("over-garment anatomy touches an upper arm and the seam could not be re-measured (%s)" % e)
+        return {}
+    names = ("torso", "back", "upperarm_l", "upperarm_r")
+    moved = max(float(np.hypot(*(np.array(frames[n]["o"]) - np.array(f2[n]["o"])))) for n in names)
+    if moved <= tol:
+        return {}
+    notes.append("over-garment anatomy touches an upper arm: torso, back and upper-arm frames pinned to the "
+                 "trunk's own seam (it had moved %.1f px)" % moved)
+    return {n: f2[n] for n in names}
 
 
 # ---------------------------------------------------------------- scale
@@ -261,7 +323,7 @@ def install(painting, race, variant, guide=None, match=None, match_by="span", wo
     if rgb.shape[:2] != glab.shape[:2]:
         rgb = np.asarray(Image.fromarray(rgb).resize(glab.shape[1::-1], Image.LANCZOS))
     notes = []
-    paint, alpha, kinfo = key(rgb)
+    paint, alpha, kinfo = key(rgb, gmask)
     sil = alpha >= 0.5
     iou = float((sil & gmask).sum()) / float((sil | gmask).sum())
     if iou < 0.85:
@@ -308,6 +370,8 @@ def install(painting, race, variant, guide=None, match=None, match_by="span", wo
 
     # world scale: same in-game size as the matched pack, by one stated measure
     frames, _ = derive_frames(lab, 1.0)
+    pins = shoulder_pins(lab, frames, notes)
+    frames.update(pins)
     mine = measures(frames)
     ratios = {}
     ref_ws = None
@@ -331,10 +395,14 @@ def install(painting, race, variant, guide=None, match=None, match_by="span", wo
         os.path.basename(painting), os.path.basename(guide), stats.get("tilt_deg", "?"))
     data["install"] = {"match": match, "match_by": match_by, "guide_iou": round(iou, 4),
                        "px_per_source_px": round(k, 5), "key": kinfo, "label_fixes": notes}
-    for keep in ("pinned",):
-        if keep in old:
-            data[keep] = old[keep]
-            data["frames"] = {n: old["frames"][n] for n in old[keep]}
+    hand = [n for n in old.get("pinned", []) if n not in old.get("auto_pinned", [])]    # set by a person: kept
+    kept = {n: old["frames"][n] for n in hand}
+    kept.update({n: f for n, f in pins.items() if n not in kept})
+    if kept:
+        data["pinned"] = sorted(kept)
+        data["frames"] = kept
+    if pins:
+        data["auto_pinned"] = sorted(n for n in pins if n not in hand)
     core.save_json(path, data)
     _, msg = build_race.build(race, variant)
 
@@ -415,7 +483,7 @@ def main(argv=None):
     ap.add_argument("--race", required=True)
     ap.add_argument("--variant", required=True)
     ap.add_argument("--guide", default=None, help="guide prefix: <prefix>_labels.png, _mask.png, .json")
-    ap.add_argument("--match", default=None, help="race[/variant] to match in-game size with (default <race>/default)")
+    ap.add_argument("--match", default=None, help="race[/variant] to match in-game size with (default <race>/legacy if it exists, else <race>/default)")
     ap.add_argument("--match-by", default="span", choices=["span", "shoulders", "head", "arm"])
     ap.add_argument("--world-scale", type=float, default=None)
     ap.add_argument("--keep-legs", action="store_true")
@@ -425,7 +493,9 @@ def main(argv=None):
     a = ap.parse_args(argv)
     match = a.match
     if match is None and a.world_scale is None:
-        match = a.race + "/default"
+        # the legacy painting sets the in-game size: <race>/legacy once a repaint has been promoted
+        has_legacy = os.path.exists(os.path.join(core.race_dir(a.race, "legacy"), "race.json"))
+        match = a.race + ("/legacy" if has_legacy and a.variant != "legacy" else "/default")
     if match and (a.race, a.variant) == tuple((match.split("/") + ["default"])[:2]):
         ap.error("--match is the pack being written")
     if a.painting is None and not a.sheet:

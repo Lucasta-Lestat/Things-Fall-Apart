@@ -1,0 +1,54 @@
+{
+ "base": "dwarf_base",
+ "pack": "dwarf_male/default",
+ "shoulder_half": 0.3583,
+ "elbow_x": 0.5611,
+ "foot_w": 0.0628,
+ "skin": [
+  204,
+  144,
+  111
+ ],
+ "cap": {
+  "thick": 1.224,
+  "label": "hair"
+ },
+ "hair": [
+  144,
+  96,
+  66
+ ],
+ "swatch": {
+  "src": "Rigs/races/dwarf_male/default/body.png",
+  "box": [
+   207,
+   92,
+   349,
+   222
+  ]
+ },
+ "look": "a dwarf man with ruddy tan skin, ginger-brown hair worn in thick braids running from the brow back over the scalp, a big ginger-brown beard and a broad stocky muscular build",
+ "dome": "cap of ginger-brown hair in thick braided rows running from front to back",
+ "face_paint": "the head as a cap of thick ginger-brown braids seen from above, the braids covering the whole top of the head down to the brows, with, in the narrow strip along its bottom edge, a natural dwarf face strongly foreshortened from above, bushy ginger-brown brows over shadowed eyes, a broad round nose tip and a thick moustache flowing into the beard",
+ "features": {
+  "beard": {
+   "len": 1.25,
+   "width": 0.95,
+   "guide": "Below the nose a big beard hangs over the top of the chest.",
+   "paint": "the beard as thick wavy ginger-brown hair with a braided centre, its rounded lower edge resting on the chest exactly where the sculpt's beard ends"
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.214 of the half span) is a circle on the hair mass; skull built at 0.175, hair cap x1.22",
+  "depth band widened to 0.309: with the legacy head size the humanoid figure is 0.297 deep (the head, not the camera, sets the depth)"
+ ],
+ "head_scale": 1.637,
+ "ear_len": 0.03,
+ "face_tilt": "the front ends of the braids reaching down to the brows, right under them the bushy brows shading the eye sockets into two dark slits, then the bridge and broad round tip of the nose, and just behind the nose the moustache where the beard begins. Brow, nose tip and moustache sit close together, squeezed by the steep view.",
+ "ear_tilt": [
+  0.034,
+  0.012,
+  0.0
+ ],
+ "finish": "chalky matte skin with soft low-contrast shading"
+}

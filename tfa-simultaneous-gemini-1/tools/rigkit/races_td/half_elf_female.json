@@ -1,0 +1,4374 @@
+{
+ "base": "half_elf_base",
+ "pack": "half_elf_female/default",
+ "shoulder_half": 0.3206,
+ "delt_r": 0.0761,
+ "trunk_depth_n": 0.1187,
+ "chest_depth_s": 0.1576,
+ "belly_depth_s": 0.1437,
+ "belly_half": 0.1653,
+ "pec_half": 0.1072,
+ "upper_arm_r": [
+  0.0585,
+  0.0478
+ ],
+ "forearm_r": [
+  0.0593,
+  0.0395
+ ],
+ "elbow_x": 0.5537,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.0541,
+ "finger_r": 0.0122,
+ "foot_x_tilt": 0.1,
+ "foot_w": 0.04,
+ "toe_y_tilt": 0.1577,
+ "leg_r": [
+  0.0676,
+  0.0469
+ ],
+ "skin": [
+  182,
+  154,
+  130
+ ],
+ "cap": {
+  "thick": 1.561,
+  "label": "hair"
+ },
+ "hair": [
+  172,
+  118,
+  62
+ ],
+ "swatch": {
+  "src": "tools/rigkit/out/plan/half_elf_female/swatch_src.png",
+  "box": [
+   0,
+   0,
+   178,
+   79
+  ]
+ },
+ "look": "a half-elf woman with muted pale beige skin, shoulder-length finely stranded wavy deep orange-gold hair parted in the middle and falling close to the head, long pointed ears and a slim soft build",
+ "dome": "cap of finely stranded wavy deep orange-gold hair parted along the middle, its many narrow ridges the strands running from the parting down each side",
+ "torso_tilt": "first the top plane of a slim chest, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one slim smooth chest with a flat upper belly below it",
+ "face_paint": "the head as matte, dry, finely stranded wavy hair painted in many thin strands, deep golden strawberry-blonde with darker orange-brown shadows between the strands, in flat even shading under soft diffuse light, with a centre parting seen from above and, in the narrow strip along its bottom edge, a natural half-elf face strongly foreshortened from above, calm brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "arms_paint": "smooth narrow shoulders and collarbones across the shoulder band; slender soft level arms with smooth even skin",
+ "features": {
+  "hair_long": {
+   "width": 1.68,
+   "depth": 0.95,
+   "paint": "the hair behind the ears as thin wavy strands lying close to the neck",
+   "guide": "Behind each ear a little hair lies close to the neck."
+  },
+  "locks": {
+   "r": [
+    0.34,
+    0.22
+   ],
+   "len": 1.25,
+   "paint": "each front lock as thin wavy strands lying on the chest"
+  },
+  "bust": {
+   "size": 0.6
+  },
+  "st_l00_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -2.2053,
+    0.8638
+   ],
+   "b": [
+    -0.439,
+    -2.1344,
+    0.8648
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l00_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -2.1344,
+    0.8648
+   ],
+   "b": [
+    -0.7488,
+    -2.0066,
+    0.8099
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l00_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -2.0066,
+    0.8099
+   ],
+   "b": [
+    -1.0241,
+    -1.7595,
+    0.8367
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l00_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -1.7595,
+    0.8367
+   ],
+   "b": [
+    -1.2521,
+    -1.5284,
+    0.7079
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l00_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -1.5284,
+    0.7079
+   ],
+   "b": [
+    -1.4223,
+    -1.1871,
+    0.6615
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l00_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -1.1871,
+    0.6615
+   ],
+   "b": [
+    -1.5269,
+    -0.901,
+    0.4773
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l01_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -2.0548,
+    1.1271
+   ],
+   "b": [
+    -0.439,
+    -2.0208,
+    1.0651
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l01_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -2.0208,
+    1.0651
+   ],
+   "b": [
+    -0.7488,
+    -1.8382,
+    1.0827
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l01_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -1.8382,
+    1.0827
+   ],
+   "b": [
+    -1.0241,
+    -1.6634,
+    0.9756
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l01_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -1.6634,
+    0.9756
+   ],
+   "b": [
+    -1.2521,
+    -1.3806,
+    0.9027
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l01_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -1.3806,
+    0.9027
+   ],
+   "b": [
+    -1.4223,
+    -1.0994,
+    0.7511
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l01_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -1.0994,
+    0.7511
+   ],
+   "b": [
+    -1.5269,
+    -0.8419,
+    0.5327
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l02_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -1.8922,
+    1.3203
+   ],
+   "b": [
+    -0.439,
+    -1.8221,
+    1.3023
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l02_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -1.8221,
+    1.3023
+   ],
+   "b": [
+    -0.7488,
+    -1.6998,
+    1.233
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l02_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -1.6998,
+    1.233
+   ],
+   "b": [
+    -1.0241,
+    -1.5426,
+    1.1051
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l02_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -1.5426,
+    1.1051
+   ],
+   "b": [
+    -1.2521,
+    -1.2762,
+    0.9946
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l02_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -1.2762,
+    0.9946
+   ],
+   "b": [
+    -1.4223,
+    -1.0867,
+    0.7616
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l02_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -1.0867,
+    0.7616
+   ],
+   "b": [
+    -1.5269,
+    -0.8061,
+    0.5558
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l03_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -1.6686,
+    1.5097
+   ],
+   "b": [
+    -0.439,
+    -1.5831,
+    1.4941
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l03_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -1.5831,
+    1.4941
+   ],
+   "b": [
+    -0.7488,
+    -1.5194,
+    1.3774
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l03_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -1.5194,
+    1.3774
+   ],
+   "b": [
+    -1.0241,
+    -1.2764,
+    1.2948
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l03_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -1.2764,
+    1.2948
+   ],
+   "b": [
+    -1.2521,
+    -1.1367,
+    1.0841
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l03_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -1.1367,
+    1.0841
+   ],
+   "b": [
+    -1.4223,
+    -0.887,
+    0.8751
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l03_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.887,
+    0.8751
+   ],
+   "b": [
+    -1.5269,
+    -0.7259,
+    0.5896
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l04_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -1.3811,
+    1.6742
+   ],
+   "b": [
+    -0.439,
+    -1.3823,
+    1.6072
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l04_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -1.3823,
+    1.6072
+   ],
+   "b": [
+    -0.7488,
+    -1.2419,
+    1.5268
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l04_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -1.2419,
+    1.5268
+   ],
+   "b": [
+    -1.0241,
+    -1.1196,
+    1.3664
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l04_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -1.1196,
+    1.3664
+   ],
+   "b": [
+    -1.2521,
+    -0.9676,
+    1.1565
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l04_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.9676,
+    1.1565
+   ],
+   "b": [
+    -1.4223,
+    -0.7723,
+    0.908
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l04_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.7723,
+    0.908
+   ],
+   "b": [
+    -1.5269,
+    -0.6912,
+    0.598
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l05_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -1.1214,
+    1.7687
+   ],
+   "b": [
+    -0.439,
+    -1.1015,
+    1.7123
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l05_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -1.1015,
+    1.7123
+   ],
+   "b": [
+    -0.7488,
+    -0.9946,
+    1.6065
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l05_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -0.9946,
+    1.6065
+   ],
+   "b": [
+    -1.0241,
+    -0.9654,
+    1.4153
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l05_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -0.9654,
+    1.4153
+   ],
+   "b": [
+    -1.2521,
+    -0.7747,
+    1.2016
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l05_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.7747,
+    1.2016
+   ],
+   "b": [
+    -1.4223,
+    -0.7448,
+    0.9131
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l05_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.7448,
+    0.9131
+   ],
+   "b": [
+    -1.5269,
+    -0.6286,
+    0.6049
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l06_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -0.8436,
+    1.824
+   ],
+   "b": [
+    -0.439,
+    -0.7635,
+    1.7726
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l06_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -0.7635,
+    1.7726
+   ],
+   "b": [
+    -0.7488,
+    -0.7723,
+    1.6429
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l06_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -0.7723,
+    1.6429
+   ],
+   "b": [
+    -1.0241,
+    -0.6216,
+    1.4586
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l06_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -0.6216,
+    1.4586
+   ],
+   "b": [
+    -1.2521,
+    -0.5815,
+    1.2121
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l06_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.5815,
+    1.2121
+   ],
+   "b": [
+    -1.4223,
+    -0.5218,
+    0.9178
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l06_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.5218,
+    0.9178
+   ],
+   "b": [
+    -1.5269,
+    -0.5172,
+    0.5921
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l07_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -0.5024,
+    1.8342
+   ],
+   "b": [
+    -0.439,
+    -0.5201,
+    1.7759
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l07_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -0.5201,
+    1.7759
+   ],
+   "b": [
+    -0.7488,
+    -0.4894,
+    1.6452
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l07_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -0.4894,
+    1.6452
+   ],
+   "b": [
+    -1.0241,
+    -0.4333,
+    1.4467
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l07_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -0.4333,
+    1.4467
+   ],
+   "b": [
+    -1.2521,
+    -0.4697,
+    1.203
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l07_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.4697,
+    1.203
+   ],
+   "b": [
+    -1.4223,
+    -0.4134,
+    0.8965
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l07_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.4134,
+    0.8965
+   ],
+   "b": [
+    -1.5269,
+    -0.5207,
+    0.593
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l08_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    -0.2061,
+    1.7922
+   ],
+   "b": [
+    -0.439,
+    -0.2471,
+    1.7402
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l08_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    -0.2471,
+    1.7402
+   ],
+   "b": [
+    -0.7488,
+    -0.1835,
+    1.5922
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l08_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    -0.1835,
+    1.5922
+   ],
+   "b": [
+    -1.0241,
+    -0.2737,
+    1.4165
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l08_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    -0.2737,
+    1.4165
+   ],
+   "b": [
+    -1.2521,
+    -0.2299,
+    1.1436
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l08_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.2299,
+    1.1436
+   ],
+   "b": [
+    -1.4223,
+    -0.3448,
+    0.8741
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l08_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.3448,
+    0.8741
+   ],
+   "b": [
+    -1.5269,
+    -0.4436,
+    0.5642
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l09_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    0.0498,
+    1.7148
+   ],
+   "b": [
+    -0.439,
+    0.0862,
+    1.6352
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l09_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.0862,
+    1.6352
+   ],
+   "b": [
+    -0.7488,
+    0.0258,
+    1.5192
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l09_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.0258,
+    1.5192
+   ],
+   "b": [
+    -1.0241,
+    0.0181,
+    1.3074
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l09_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.0181,
+    1.3074
+   ],
+   "b": [
+    -1.2521,
+    -0.0445,
+    1.0538
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l09_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    -0.0445,
+    1.0538
+   ],
+   "b": [
+    -1.4223,
+    -0.1923,
+    0.7948
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l09_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.1923,
+    0.7948
+   ],
+   "b": [
+    -1.5269,
+    -0.3513,
+    0.4972
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l10_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    0.3406,
+    1.5716
+   ],
+   "b": [
+    -0.439,
+    0.3176,
+    1.5142
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l10_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.3176,
+    1.5142
+   ],
+   "b": [
+    -0.7488,
+    0.2331,
+    1.4112
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l10_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.2331,
+    1.4112
+   ],
+   "b": [
+    -1.0241,
+    0.1978,
+    1.1965
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l10_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.1978,
+    1.1965
+   ],
+   "b": [
+    -1.2521,
+    0.0061,
+    1.0207
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l10_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.0061,
+    1.0207
+   ],
+   "b": [
+    -1.4223,
+    -0.1109,
+    0.7298
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l10_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.1109,
+    0.7298
+   ],
+   "b": [
+    -1.5269,
+    -0.3648,
+    0.5101
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l11_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    0.5891,
+    1.3862
+   ],
+   "b": [
+    -0.439,
+    0.5147,
+    1.3692
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l11_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.5147,
+    1.3692
+   ],
+   "b": [
+    -0.7488,
+    0.4943,
+    1.2053
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l11_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.4943,
+    1.2053
+   ],
+   "b": [
+    -1.0241,
+    0.3329,
+    1.0818
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l11_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.3329,
+    1.0818
+   ],
+   "b": [
+    -1.2521,
+    0.2008,
+    0.8427
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l11_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.2008,
+    0.8427
+   ],
+   "b": [
+    -1.4223,
+    -0.0261,
+    0.6341
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l11_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    -0.0261,
+    0.6341
+   ],
+   "b": [
+    -1.5269,
+    -0.306,
+    0.4398
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l12_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    0.763,
+    1.2028
+   ],
+   "b": [
+    -0.439,
+    0.7369,
+    1.1342
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l12_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.7369,
+    1.1342
+   ],
+   "b": [
+    -0.7488,
+    0.6396,
+    1.036
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l12_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.6396,
+    1.036
+   ],
+   "b": [
+    -1.0241,
+    0.4868,
+    0.8976
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l12_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.4868,
+    0.8976
+   ],
+   "b": [
+    -1.2521,
+    0.3119,
+    0.675
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l12_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.3119,
+    0.675
+   ],
+   "b": [
+    -1.4223,
+    0.0269,
+    0.5469
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l12_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    0.0269,
+    0.5469
+   ],
+   "b": [
+    -1.5269,
+    -0.2687,
+    0.3512
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l13_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    0.9239,
+    0.9605
+   ],
+   "b": [
+    -0.439,
+    0.8844,
+    0.8975
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l13_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.8844,
+    0.8975
+   ],
+   "b": [
+    -0.7488,
+    0.7409,
+    0.8737
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l13_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.7409,
+    0.8737
+   ],
+   "b": [
+    -1.0241,
+    0.5971,
+    0.6922
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l13_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.5971,
+    0.6922
+   ],
+   "b": [
+    -1.2521,
+    0.3337,
+    0.6295
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l13_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.3337,
+    0.6295
+   ],
+   "b": [
+    -1.4223,
+    0.0656,
+    0.4493
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l13_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    0.0656,
+    0.4493
+   ],
+   "b": [
+    -1.5269,
+    -0.2701,
+    0.3566
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l14_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    1.0406,
+    0.6728
+   ],
+   "b": [
+    -0.439,
+    0.9682,
+    0.6892
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l14_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    0.9682,
+    0.6892
+   ],
+   "b": [
+    -0.7488,
+    0.8556,
+    0.5694
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l14_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.8556,
+    0.5694
+   ],
+   "b": [
+    -1.0241,
+    0.6564,
+    0.4988
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l14_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.6564,
+    0.4988
+   ],
+   "b": [
+    -1.2521,
+    0.4011,
+    0.3906
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l14_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.4011,
+    0.3906
+   ],
+   "b": [
+    -1.4223,
+    0.0904,
+    0.2757
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l14_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    0.0904,
+    0.2757
+   ],
+   "b": [
+    -1.5269,
+    -0.2604,
+    0.2673
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l15_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    1.0883,
+    0.4261
+   ],
+   "b": [
+    -0.439,
+    1.0246,
+    0.4092
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l15_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    1.0246,
+    0.4092
+   ],
+   "b": [
+    -0.7488,
+    0.8883,
+    0.3365
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l15_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.8883,
+    0.3365
+   ],
+   "b": [
+    -1.0241,
+    0.6776,
+    0.3322
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l15_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.6776,
+    0.3322
+   ],
+   "b": [
+    -1.2521,
+    0.4045,
+    0.2006
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l15_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.4045,
+    0.2006
+   ],
+   "b": [
+    -1.4223,
+    0.0884,
+    0.2323
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l15_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    0.0884,
+    0.2323
+   ],
+   "b": [
+    -1.5269,
+    -0.2717,
+    0.1985
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_l16_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.1089,
+    1.0909,
+    0.1629
+   ],
+   "b": [
+    -0.439,
+    1.0199,
+    0.1097
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_l16_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.439,
+    1.0199,
+    0.1097
+   ],
+   "b": [
+    -0.7488,
+    0.8838,
+    0.1612
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_l16_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -0.7488,
+    0.8838,
+    0.1612
+   ],
+   "b": [
+    -1.0241,
+    0.6595,
+    0.0779
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_l16_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.0241,
+    0.6595,
+    0.0779
+   ],
+   "b": [
+    -1.2521,
+    0.3927,
+    0.1184
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_l16_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.2521,
+    0.3927,
+    0.1184
+   ],
+   "b": [
+    -1.4223,
+    0.0678,
+    0.1191
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_l16_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    -1.4223,
+    0.0678,
+    0.1191
+   ],
+   "b": [
+    -1.5269,
+    -0.2812,
+    0.1706
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r00_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -2.1993,
+    0.8772
+   ],
+   "b": [
+    0.439,
+    -2.1514,
+    0.8269
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r00_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -2.1514,
+    0.8269
+   ],
+   "b": [
+    0.7488,
+    -1.9771,
+    0.8698
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r00_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.9771,
+    0.8698
+   ],
+   "b": [
+    1.0241,
+    -1.7963,
+    0.7691
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r00_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -1.7963,
+    0.7691
+   ],
+   "b": [
+    1.2521,
+    -1.4941,
+    0.7635
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r00_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -1.4941,
+    0.7635
+   ],
+   "b": [
+    1.4223,
+    -1.2098,
+    0.6318
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r00_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -1.2098,
+    0.6318
+   ],
+   "b": [
+    1.5269,
+    -0.8952,
+    0.484
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r01_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -2.0781,
+    1.0933
+   ],
+   "b": [
+    0.439,
+    -1.9903,
+    1.1085
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r01_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -1.9903,
+    1.1085
+   ],
+   "b": [
+    0.7488,
+    -1.8664,
+    1.046
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r01_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.8664,
+    1.046
+   ],
+   "b": [
+    1.0241,
+    -1.6501,
+    0.9919
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r01_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -1.6501,
+    0.9919
+   ],
+   "b": [
+    1.2521,
+    -1.3729,
+    0.9104
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r01_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -1.3729,
+    0.9104
+   ],
+   "b": [
+    1.4223,
+    -1.1237,
+    0.7295
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r01_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -1.1237,
+    0.7295
+   ],
+   "b": [
+    1.5269,
+    -0.8174,
+    0.5492
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r02_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -1.8838,
+    1.3287
+   ],
+   "b": [
+    0.439,
+    -1.8164,
+    1.3078
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r02_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -1.8164,
+    1.3078
+   ],
+   "b": [
+    0.7488,
+    -1.7275,
+    1.2063
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r02_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.7275,
+    1.2063
+   ],
+   "b": [
+    1.0241,
+    -1.4934,
+    1.1484
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r02_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -1.4934,
+    1.1484
+   ],
+   "b": [
+    1.2521,
+    -1.3336,
+    0.9473
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r02_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -1.3336,
+    0.9473
+   ],
+   "b": [
+    1.4223,
+    -1.0388,
+    0.797
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r02_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -1.0388,
+    0.797
+   ],
+   "b": [
+    1.5269,
+    -0.8301,
+    0.541
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r03_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -1.6401,
+    1.5295
+   ],
+   "b": [
+    0.439,
+    -1.6327,
+    1.4601
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r03_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -1.6327,
+    1.4601
+   ],
+   "b": [
+    0.7488,
+    -1.458,
+    1.417
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r03_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.458,
+    1.417
+   ],
+   "b": [
+    1.0241,
+    -1.3328,
+    1.2626
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r03_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -1.3328,
+    1.2626
+   ],
+   "b": [
+    1.2521,
+    -1.103,
+    1.1014
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r03_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -1.103,
+    1.1014
+   ],
+   "b": [
+    1.4223,
+    -0.8925,
+    0.873
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r03_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.8925,
+    0.873
+   ],
+   "b": [
+    1.5269,
+    -0.737,
+    0.5862
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r04_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -1.4128,
+    1.6595
+   ],
+   "b": [
+    0.439,
+    -1.3539,
+    1.6204
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r04_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -1.3539,
+    1.6204
+   ],
+   "b": [
+    0.7488,
+    -1.2495,
+    1.5237
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r04_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.2495,
+    1.5237
+   ],
+   "b": [
+    1.0241,
+    -1.1429,
+    1.3573
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r04_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -1.1429,
+    1.3573
+   ],
+   "b": [
+    1.2521,
+    -0.9177,
+    1.1717
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r04_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.9177,
+    1.1717
+   ],
+   "b": [
+    1.4223,
+    -0.8282,
+    0.8944
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r04_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.8282,
+    0.8944
+   ],
+   "b": [
+    1.5269,
+    -0.655,
+    0.6032
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r05_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -1.1336,
+    1.7652
+   ],
+   "b": [
+    0.439,
+    -1.0616,
+    1.723
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r05_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -1.0616,
+    1.723
+   ],
+   "b": [
+    0.7488,
+    -1.0619,
+    1.5891
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r05_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -1.0619,
+    1.5891
+   ],
+   "b": [
+    1.0241,
+    -0.8848,
+    1.4332
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r05_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -0.8848,
+    1.4332
+   ],
+   "b": [
+    1.2521,
+    -0.846,
+    1.1891
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r05_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.846,
+    1.1891
+   ],
+   "b": [
+    1.4223,
+    -0.7019,
+    0.9191
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r05_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.7019,
+    0.9191
+   ],
+   "b": [
+    1.5269,
+    -0.6406,
+    0.6043
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r06_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -0.8001,
+    1.8288
+   ],
+   "b": [
+    0.439,
+    -0.8218,
+    1.7669
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r06_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -0.8218,
+    1.7669
+   ],
+   "b": [
+    0.7488,
+    -0.719,
+    1.647
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r06_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -0.719,
+    1.647
+   ],
+   "b": [
+    1.0241,
+    -0.6499,
+    1.4582
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r06_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -0.6499,
+    1.4582
+   ],
+   "b": [
+    1.2521,
+    -0.5871,
+    1.2123
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r06_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.5871,
+    1.2123
+   ],
+   "b": [
+    1.4223,
+    -0.4923,
+    0.9136
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r06_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.4923,
+    0.9136
+   ],
+   "b": [
+    1.5269,
+    -0.5452,
+    0.5984
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r07_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -0.5179,
+    1.8351
+   ],
+   "b": [
+    0.439,
+    -0.5236,
+    1.7761
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r07_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -0.5236,
+    1.7761
+   ],
+   "b": [
+    0.7488,
+    -0.4542,
+    1.6421
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r07_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -0.4542,
+    1.6421
+   ],
+   "b": [
+    1.0241,
+    -0.4975,
+    1.4536
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r07_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -0.4975,
+    1.4536
+   ],
+   "b": [
+    1.2521,
+    -0.3948,
+    1.1905
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r07_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.3948,
+    1.1905
+   ],
+   "b": [
+    1.4223,
+    -0.4742,
+    0.9104
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r07_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.4742,
+    0.9104
+   ],
+   "b": [
+    1.5269,
+    -0.4916,
+    0.5843
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r08_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    -0.239,
+    1.7993
+   ],
+   "b": [
+    0.439,
+    -0.1879,
+    1.7268
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r08_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    -0.1879,
+    1.7268
+   ],
+   "b": [
+    0.7488,
+    -0.2572,
+    1.6105
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r08_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    -0.2572,
+    1.6105
+   ],
+   "b": [
+    1.0241,
+    -0.2066,
+    1.3979
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r08_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    -0.2066,
+    1.3979
+   ],
+   "b": [
+    1.2521,
+    -0.2707,
+    1.1579
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r08_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.2707,
+    1.1579
+   ],
+   "b": [
+    1.4223,
+    -0.335,
+    0.8704
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r08_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.335,
+    0.8704
+   ],
+   "b": [
+    1.5269,
+    -0.4357,
+    0.5601
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r09_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    0.0841,
+    1.7012
+   ],
+   "b": [
+    0.439,
+    0.0535,
+    1.6488
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r09_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.0535,
+    1.6488
+   ],
+   "b": [
+    0.7488,
+    0.0385,
+    1.5137
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r09_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.0385,
+    1.5137
+   ],
+   "b": [
+    1.0241,
+    0.0349,
+    1.2986
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r09_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.0349,
+    1.2986
+   ],
+   "b": [
+    1.2521,
+    -0.0849,
+    1.0773
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r09_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    -0.0849,
+    1.0773
+   ],
+   "b": [
+    1.4223,
+    -0.149,
+    0.7628
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r09_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.149,
+    0.7628
+   ],
+   "b": [
+    1.5269,
+    -0.377,
+    0.5207
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r10_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    0.3485,
+    1.5667
+   ],
+   "b": [
+    0.439,
+    0.2862,
+    1.5333
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r10_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.2862,
+    1.5333
+   ],
+   "b": [
+    0.7488,
+    0.2878,
+    1.3756
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r10_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.2878,
+    1.3756
+   ],
+   "b": [
+    1.0241,
+    0.1319,
+    1.2419
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r10_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.1319,
+    1.2419
+   ],
+   "b": [
+    1.2521,
+    0.0637,
+    0.9775
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r10_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.0637,
+    0.9775
+   ],
+   "b": [
+    1.4223,
+    -0.1446,
+    0.7592
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r10_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.1446,
+    0.7592
+   ],
+   "b": [
+    1.5269,
+    -0.3547,
+    0.5006
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r11_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    0.5577,
+    1.4138
+   ],
+   "b": [
+    0.439,
+    0.5578,
+    1.3308
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r11_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.5578,
+    1.3308
+   ],
+   "b": [
+    0.7488,
+    0.4546,
+    1.2432
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r11_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.4546,
+    1.2432
+   ],
+   "b": [
+    1.0241,
+    0.3558,
+    1.0588
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r11_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.3558,
+    1.0588
+   ],
+   "b": [
+    1.2521,
+    0.2006,
+    0.8429
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r11_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.2006,
+    0.8429
+   ],
+   "b": [
+    1.4223,
+    -0.0405,
+    0.6533
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r11_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    -0.0405,
+    0.6533
+   ],
+   "b": [
+    1.5269,
+    -0.2937,
+    0.4179
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r12_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    0.774,
+    1.1891
+   ],
+   "b": [
+    0.439,
+    0.7362,
+    1.1351
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r12_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.7362,
+    1.1351
+   ],
+   "b": [
+    0.7488,
+    0.6228,
+    1.0586
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r12_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.6228,
+    1.0586
+   ],
+   "b": [
+    1.0241,
+    0.5173,
+    0.85
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r12_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.5173,
+    0.85
+   ],
+   "b": [
+    1.2521,
+    0.278,
+    0.7353
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r12_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.278,
+    0.7353
+   ],
+   "b": [
+    1.4223,
+    0.0505,
+    0.4936
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r12_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    0.0505,
+    0.4936
+   ],
+   "b": [
+    1.5269,
+    -0.277,
+    0.3793
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r13_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    0.9374,
+    0.9346
+   ],
+   "b": [
+    0.439,
+    0.8589,
+    0.9464
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r13_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.8589,
+    0.9464
+   ],
+   "b": [
+    0.7488,
+    0.7725,
+    0.8099
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r13_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.7725,
+    0.8099
+   ],
+   "b": [
+    1.0241,
+    0.5696,
+    0.7539
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r13_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.5696,
+    0.7539
+   ],
+   "b": [
+    1.2521,
+    0.3508,
+    0.5882
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r13_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.3508,
+    0.5882
+   ],
+   "b": [
+    1.4223,
+    0.0614,
+    0.4627
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r13_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    0.0614,
+    0.4627
+   ],
+   "b": [
+    1.5269,
+    -0.2716,
+    0.3622
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r14_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    1.0303,
+    0.7071
+   ],
+   "b": [
+    0.439,
+    0.9786,
+    0.6543
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r14_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    0.9786,
+    0.6543
+   ],
+   "b": [
+    0.7488,
+    0.8513,
+    0.587
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r14_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.8513,
+    0.587
+   ],
+   "b": [
+    1.0241,
+    0.6538,
+    0.5107
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r14_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.6538,
+    0.5107
+   ],
+   "b": [
+    1.2521,
+    0.4053,
+    0.3516
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r14_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.4053,
+    0.3516
+   ],
+   "b": [
+    1.4223,
+    0.0888,
+    0.3242
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r14_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    0.0888,
+    0.3242
+   ],
+   "b": [
+    1.5269,
+    -0.2637,
+    0.2346
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r15_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    1.0877,
+    0.4318
+   ],
+   "b": [
+    0.439,
+    1.0272,
+    0.3785
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r15_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    1.0272,
+    0.3785
+   ],
+   "b": [
+    0.7488,
+    0.8843,
+    0.3948
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r15_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.8843,
+    0.3948
+   ],
+   "b": [
+    1.0241,
+    0.6786,
+    0.2578
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r15_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.6786,
+    0.2578
+   ],
+   "b": [
+    1.2521,
+    0.4082,
+    0.27
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r15_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.4082,
+    0.27
+   ],
+   "b": [
+    1.4223,
+    0.083,
+    0.1873
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r15_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    0.083,
+    0.1873
+   ],
+   "b": [
+    1.5269,
+    -0.2678,
+    0.2135
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  },
+  "st_r16_0": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.1089,
+    1.0871,
+    0.1238
+   ],
+   "b": [
+    0.439,
+    1.0258,
+    0.1654
+   ],
+   "r": [
+    0.07,
+    0.0675
+   ]
+  },
+  "st_r16_1": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.439,
+    1.0258,
+    0.1654
+   ],
+   "b": [
+    0.7488,
+    0.8772,
+    0.1058
+   ],
+   "r": [
+    0.0675,
+    0.065
+   ]
+  },
+  "st_r16_2": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    0.7488,
+    0.8772,
+    0.1058
+   ],
+   "b": [
+    1.0241,
+    0.6657,
+    0.1135
+   ],
+   "r": [
+    0.065,
+    0.0625
+   ]
+  },
+  "st_r16_3": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.0241,
+    0.6657,
+    0.1135
+   ],
+   "b": [
+    1.2521,
+    0.3915,
+    0.1128
+   ],
+   "r": [
+    0.0625,
+    0.06
+   ]
+  },
+  "st_r16_4": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.2521,
+    0.3915,
+    0.1128
+   ],
+   "b": [
+    1.4223,
+    0.0622,
+    0.1006
+   ],
+   "r": [
+    0.06,
+    0.0575
+   ]
+  },
+  "st_r16_5": {
+   "kind": "rod",
+   "space": "head",
+   "label": "hair",
+   "colour": "hair",
+   "core": false,
+   "a": [
+    1.4223,
+    0.0622,
+    0.1006
+   ],
+   "b": [
+    1.5269,
+    -0.2735,
+    0.1924
+   ],
+   "r": [
+    0.0575,
+    0.055
+   ]
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.234 of the half span) is a circle on the hair mass; skull built at 0.150, hair cap x1.56",
+  "corrective pass: st_* rods are hair strand ridges on the cap (generated; meridians from the centre parting), swatch_src.png = legacy upper-arm skin + legacy crown hair side by side"
+ ],
+ "head_scale": 1.37,
+ "note": "She wears a plain beige cloth band wrapped across the chest. The right patch of image 2 is her hair: match its deep orange-gold colour, its many thin wavy strands with darker shadows between them and its dry matte finish.",
+ "hands_paint": "each hand with five slender well-formed fingers held apart, plain grey background showing between neighbouring fingers down to the knuckles, and short fingernails",
+ "skin_words": "muted pale beige skin (left patch), its slightly lighter highlights",
+ "dome_cover_tilt": "back of each hand",
+ "swatch_of": "skin (left patch) and hair (right patch)",
+ "finish": "chalky matte skin and dry matte hair"
+}

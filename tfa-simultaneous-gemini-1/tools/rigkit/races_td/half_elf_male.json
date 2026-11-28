@@ -1,0 +1,81 @@
+{
+ "base": "half_elf_base",
+ "pack": "half_elf_male/default",
+ "shoulder_half": 0.3188,
+ "delt_r": 0.1072,
+ "trunk_depth_n": 0.1686,
+ "chest_depth_s": 0.2162,
+ "belly_depth_s": 0.1936,
+ "belly_half": 0.2026,
+ "pec_half": 0.1296,
+ "upper_arm_r": [
+  0.0903,
+  0.0739
+ ],
+ "forearm_r": [
+  0.0858,
+  0.0572
+ ],
+ "elbow_x": 0.5385,
+ "wrist_x": 0.7609,
+ "palm_rx": 0.0861,
+ "palm_ry": 0.0697,
+ "finger_r": 0.0157,
+ "foot_x_tilt": 0.1445,
+ "foot_w": 0.0592,
+ "toe_y_tilt": 0.194,
+ "leg_r": [
+  0.0864,
+  0.0556
+ ],
+ "skin": [
+  220,
+  174,
+  144
+ ],
+ "cap": {
+  "thick": 1.06,
+  "label": "hair"
+ },
+ "hair": [
+  78,
+  59,
+  49
+ ],
+ "swatch": {
+  "src": "Rigs/races/half_elf_male/default/body.png",
+  "box": [
+   231,
+   88,
+   381,
+   219
+  ]
+ },
+ "look": "a half-elf man with light tan skin, dark brown hair combed straight back into a topknot, long pointed ears swept back and an athletic build",
+ "dome": "cap of dark brown hair combed straight back into a topknot",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one athletic chest with two pectoral muscles and a flat upper belly below them",
+ "face_paint": "the head as a cap of dark brown hair combed straight back into a topknot seen from above with, in the narrow strip along its bottom edge, a natural half-elf face strongly foreshortened from above, straight dark brows over shadowed eyes, a nose tip, closed lips and the front of the chin",
+ "arms_paint": "firm shoulders and collarbones across the shoulder band; level arms with lean, lightly defined muscle",
+ "features": {
+  "bun": {
+   "at": [
+    0.0,
+    -1.0,
+    0.7
+   ],
+   "size": 0.55
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.146 of the half span) is a circle on the hair mass; skull built at 0.137, hair cap x1.06"
+ ],
+ "head_scale": 1.28,
+ "ear_len": 0.06,
+ "ear_tilt": [
+  0.026,
+  0.09,
+  0.012
+ ],
+ "note": "The hair is matte, painted in a few broad soft strands of dark brown with one gentle lighter band."
+}

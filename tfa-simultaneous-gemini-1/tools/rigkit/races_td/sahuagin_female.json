@@ -1,0 +1,133 @@
+{
+ "base": "sahuagin_base",
+ "pack": "sahuagin_female/default",
+ "shoulder_half": 0.2572,
+ "delt_r": 0.0968,
+ "trunk_depth_n": 0.1519,
+ "chest_depth_s": 0.1966,
+ "belly_depth_s": 0.1769,
+ "belly_half": 0.1901,
+ "pec_half": 0.1221,
+ "upper_arm_r": [
+  0.0797,
+  0.0652
+ ],
+ "elbow_x": 0.5491,
+ "wrist_x": 0.7772,
+ "palm_rx": 0.0802,
+ "palm_ry": 0.0704,
+ "finger_r": 0.0159,
+ "foot_x_tilt": 0.1341,
+ "foot_w": 0.0587,
+ "toe_y_tilt": 0.1819,
+ "leg_r": [
+  0.0802,
+  0.0527
+ ],
+ "skin": [
+  52,
+  114,
+  100
+ ],
+ "swatch": {
+  "src": "Rigs/races/sahuagin_female/default/body.png",
+  "box": [
+   647,
+   124,
+   749,
+   237
+  ]
+ },
+ "look": "a female sahuagin, a stocky fish-folk with deep teal scaled skin, a smooth domed head with a blunt snout, ribbed fin ears, webbed clawed hands, a fin under each forearm and one tall back fin",
+ "torso_tilt": "first the top plane of the chest with its two pectoral muscles meeting at the breastbone, then, tucked under the chest, a short glimpse of the flat upper belly.",
+ "torso_paint": "the torso as one athletic chest with two pectoral muscles and a flat upper belly below them",
+ "features": {
+  "crest": null,
+  "dorsal_fin": null,
+  "back_fin": {
+   "kind": "rod",
+   "space": "body",
+   "label": "over_garment",
+   "core": false,
+   "a": [
+    0,
+    -0.05,
+    1.6
+   ],
+   "b": [
+    0,
+    -0.31,
+    1.7
+   ],
+   "r": [
+    0.045,
+    0.006
+   ],
+   "kz": 1.6,
+   "guide": "One tall fin stands on the middle of the upper back behind the head, a narrow blade that tapers to a point at the top of the picture.",
+   "paint": "the back fin as one smooth ribbed blade"
+  },
+  "arm_fin_l": {
+   "kind": "rod",
+   "space": "body",
+   "label": "forearm_l",
+   "a": [
+    -0.7,
+    0.045,
+    1.55
+   ],
+   "b": [
+    -0.555,
+    0.135,
+    1.55
+   ],
+   "r": [
+    0.05,
+    0.006
+   ],
+   "kz": 0.25,
+   "guide": "A small flat fin hangs from the lower edge of each forearm near the elbow.",
+   "paint": "each forearm fin as a thin ribbed membrane"
+  },
+  "arm_fin_r": {
+   "kind": "rod",
+   "space": "body",
+   "label": "forearm_r",
+   "a": [
+    0.7,
+    0.045,
+    1.55
+   ],
+   "b": [
+    0.555,
+    0.135,
+    1.55
+   ],
+   "r": [
+    0.05,
+    0.006
+   ],
+   "kz": 0.25
+  }
+ },
+ "head_scale": 1.232,
+ "head_pivot_z": 1.7,
+ "head_back": -0.012,
+ "ear_len": 0.06,
+ "ear_tilt": [
+  0.04,
+  0.085,
+  0.03
+ ],
+ "foot": {
+  "kind": "claw",
+  "toes": 4,
+  "toe_len": 1.0,
+  "spread": 0.42,
+  "claw": 0.4
+ },
+ "feet_tilt": "At the very bottom the front halves of the two feet stand on the floor far below, toes pointing at the bottom of the picture, each a broad webbed foot front with four toes that fan out and end in claws.",
+ "feet_paint": "each foot front with four webbed toes ending in short dark claws",
+ "hands_paint": "each hand with five webbed fingers ending in small dark claws",
+ "arms_paint": "the shoulder band and the level arms as smooth teal skin over firm muscle with a few patches of rounded paler scales"
+}

@@ -1,0 +1,106 @@
+{
+ "pack": "orc_female/default",
+ "shoulder_half": 0.3513,
+ "delt_r": 0.1153,
+ "trunk_depth_n": 0.1816,
+ "chest_depth_s": 0.2314,
+ "belly_depth_s": 0.2066,
+ "belly_half": 0.2122,
+ "pec_half": 0.1354,
+ "skull_r": 0.108,
+ "skull_y": 0.004,
+ "nose": [
+  0.0,
+  0.0
+ ],
+ "tusk": 0.025,
+ "tusk_x": 0.05,
+ "ear_len": 0.105,
+ "upper_arm_r": [
+  0.099,
+  0.081
+ ],
+ "forearm_r": [
+  0.09,
+  0.06
+ ],
+ "elbow_x": 0.5664,
+ "wrist_x": 0.76,
+ "palm_rx": 0.0864,
+ "palm_ry": 0.078,
+ "finger_r": 0.0176,
+ "foot_x": 0.12,
+ "toe_y": 0.2,
+ "toe_r": 0.02,
+ "foot_x_tilt": 0.1497,
+ "foot_w": 0.061,
+ "toe_y_tilt": 0.2035,
+ "leg_r": [
+  0.0913,
+  0.0578
+ ],
+ "ivory": [
+  236,
+  226,
+  196
+ ],
+ "skin": [
+  127,
+  143,
+  94
+ ],
+ "cap": {
+  "thick": 1.317,
+  "label": "hair"
+ },
+ "hair": [
+  145,
+  114,
+  76
+ ],
+ "tusk_x_tilt": 0.046,
+ "swatch": {
+  "src": "Rigs/races/orc_female/default/body.png",
+  "box": [
+   665,
+   153,
+   743,
+   276
+  ]
+ },
+ "look": "a heavy-set orc woman with olive-green skin, a wild tousled mane of light chestnut-brown hair, long pointed ears, two ivory lower tusks and a strong, thick, full-figured build",
+ "dome": "wild tousled mane of light chestnut-brown hair",
+ "dome_cover_tilt": "hair",
+ "skin_words": "fresh saturated olive-green skin, its lighter highlights",
+ "line_words": "crisp, near-black green contour line",
+ "face_tilt": "a heavy brow ridge whose overhang shades the eye sockets into two dark slits, right under it the broad tip of the nose, and just behind the nose the front of the jaw with one small ivory tusk rising from each corner of the lower lip. Brow, nose tip and tusks sit close together, squeezed by the steep view, and the tusks and lower lip are the bottom edge of the head, with the chest starting directly below them. A pointed ear sticks out sideways from each side of the head.",
+ "torso_tilt": "first the top plane of the chest with the soft swell of the bust, then, tucked under the chest, a short glimpse of the rounded belly.",
+ "torso_paint": "the torso as one broad full chest with a gentle bust line and a rounded belly below it",
+ "face_paint": "the head as a wild tousled mane of light chestnut-brown hair seen from above, its wavy locks flicking outward at the edge and a few falling over the forehead, with, in the narrow strip along its bottom edge, a natural orc face strongly foreshortened from above, a scowling brow over shadowed eye slits, a broad olive-green nose tip and the front of a heavy jaw with its two ivory tusks, and a long pointed olive-green ear at each side",
+ "arms_paint": "broad rounded shoulders across the shoulder band; thick level arms with firm, softly defined muscle",
+ "features": {
+  "hair_bushy": {
+   "count": 11,
+   "size": 0.42
+  },
+  "bust": {
+   "size": 1.0
+  }
+ },
+ "notes": [
+  "head-size rule: the legacy head frame (0.211 of the half span) is a circle on the hair mass; skull built at 0.160, hair cap x1.32",
+  "depth band widened to 0.333: with the legacy head size the humanoid figure is 0.321 deep (the head, not the camera, sets the depth)"
+ ],
+ "head_scale": 1.445,
+ "head_pivot_z": 1.8,
+ "head_back": -0.03,
+ "depth_band": [
+  0.22,
+  0.333
+ ],
+ "ear_tilt": [
+  0.03,
+  0.05,
+  0.02
+ ]
+}
